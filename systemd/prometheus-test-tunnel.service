@@ -7,7 +7,7 @@ Requires=prometheus-node-exporter.service
 [Service]
 Type=simple
 User=root
-ExecStart=/usr/bin/ssh -NT -i /root/.ssh/prometheus_tunnel_ed25519 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -R 172.17.0.1:19100:127.0.0.1:9100 root@95.111.255.6
+ExecStart=/usr/bin/ssh -NT -i /root/.ssh/prometheus_tunnel_ed25519 -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o StrictHostKeyChecking=accept-new -R 172.17.0.1:19100:127.0.0.1:9100 -R 172.17.0.1:19101:127.0.0.1:18082 root@95.111.255.6
 Restart=always
 RestartSec=10
 
