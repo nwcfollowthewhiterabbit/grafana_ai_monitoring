@@ -24,11 +24,12 @@
   "tags": [
     "docker",
     "stacks",
-    "services"
+    "services",
+    "resources"
   ],
   "timezone": "browser",
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-6h",
@@ -87,7 +88,7 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "query": "label_values(docker_stack_container_running{company=~\"$company\",alias=~\"$node\"}, stack)",
+        "query": "label_values(docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack!~\"monitoring.*|node-exporter\"}, stack)",
         "refresh": 1,
         "sort": 1,
         "multi": true,
@@ -127,7 +128,7 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Running Containers",
+      "title": "Online Servers",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -163,7 +164,7 @@
       },
       "options": {
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -178,7 +179,7 @@
       },
       "targets": [
         {
-          "expr": "sum(docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "expr": "sum(up{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\"})",
           "refId": "A",
           "legendFormat": ""
         }
@@ -187,7 +188,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Stopped Containers",
+      "title": "Down Servers",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -223,7 +224,7 @@
       },
       "options": {
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -238,7 +239,7 @@
       },
       "targets": [
         {
-          "expr": "count(docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state!=\"running\"})",
+          "expr": "count(up{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\"} == 0)",
           "refId": "A",
           "legendFormat": ""
         }
@@ -247,7 +248,7 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Stacks",
+      "title": "Running Containers",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -268,8 +269,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -279,7 +284,7 @@
       },
       "options": {
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -294,7 +299,7 @@
       },
       "targets": [
         {
-          "expr": "count(count by (alias,stack) (docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"}))",
+          "expr": "sum(docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
           "refId": "A",
           "legendFormat": ""
         }
@@ -303,7 +308,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Services",
+      "title": "Stopped Containers",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -326,6 +331,10 @@
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 1
               }
             ]
           },
@@ -335,7 +344,7 @@
       },
       "options": {
         "colorMode": "background",
-        "graphMode": "none",
+        "graphMode": "area",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -350,25 +359,38 @@
       },
       "targets": [
         {
-          "expr": "count(count by (alias,stack,service) (docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"}))",
+          "expr": "count(docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state!=\"running\"})",
           "refId": "A",
           "legendFormat": ""
         }
       ]
     },
     {
+      "id": 100,
+      "type": "row",
+      "title": "Servers: RAM And Disk",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
       "id": 5,
-      "type": "timeseries",
-      "title": "CPU by Stack",
+      "type": "bargauge",
+      "title": "Server RAM Used %",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 5,
         "w": 12,
-        "h": 8
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -395,41 +417,108 @@
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none",
-          "hideZeros": false
-        }
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
       },
       "targets": [
         {
-          "expr": "sum by (alias,stack) (docker_stack_container_cpu_percent{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "expr": "(1 - (node_memory_MemAvailable_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\"} / node_memory_MemTotal_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\"})) * 100",
           "refId": "A",
-          "legendFormat": "{{alias}} / {{stack}}"
+          "legendFormat": "{{alias}}"
         }
       ]
     },
     {
       "id": 6,
-      "type": "timeseries",
-      "title": "Memory by Stack",
+      "type": "bargauge",
+      "title": "Server Root Disk Free %",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
         "x": 12,
-        "y": 4,
+        "y": 5,
         "w": 12,
-        "h": 8
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "100 * node_filesystem_avail_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}",
+          "refId": "A",
+          "legendFormat": "{{alias}}"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "bargauge",
+      "title": "Server Root Disk Free Bytes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 12,
+        "h": 7
       },
       "fieldConfig": {
         "defaults": {
@@ -456,19 +545,427 @@
         "overrides": []
       },
       "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true,
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
           "calcs": [
             "lastNotNull"
-          ]
+          ],
+          "fields": "",
+          "values": false
         },
-        "tooltip": {
-          "mode": "single",
-          "sort": "none",
-          "hideZeros": false
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "node_filesystem_avail_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"}",
+          "refId": "A",
+          "legendFormat": "{{alias}}"
         }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "bargauge",
+      "title": "Server RAM Free Bytes",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 12,
+        "w": 12,
+        "h": 7
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "node_memory_MemAvailable_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$node\"}",
+          "refId": "A",
+          "legendFormat": "{{alias}}"
+        }
+      ]
+    },
+    {
+      "id": 101,
+      "type": "row",
+      "title": "Stacks: Placement And State",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 19,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 9,
+      "type": "bargauge",
+      "title": "Running Containers By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}}"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "bargauge",
+      "title": "Stopped Containers By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "count by (alias,stack) (docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state!=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}}"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "table",
+      "title": "Stack Placement: Server / Stack / Service",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (company,alias,stack,service) (docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"})",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 102,
+      "type": "row",
+      "title": "Stacks: CPU And RAM",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "CPU Now By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_cpu_percent{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}}"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "RAM Now By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 37,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
       },
       "targets": [
         {
@@ -479,16 +976,16 @@
       ]
     },
     {
-      "id": 7,
+      "id": 14,
       "type": "timeseries",
-      "title": "CPU by Service",
+      "title": "CPU By Service",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
         "x": 0,
-        "y": 12,
+        "y": 46,
         "w": 12,
         "h": 8
       },
@@ -527,7 +1024,7 @@
         },
         "tooltip": {
           "mode": "single",
-          "sort": "none",
+          "sort": "desc",
           "hideZeros": false
         }
       },
@@ -540,16 +1037,16 @@
       ]
     },
     {
-      "id": 8,
+      "id": 15,
       "type": "timeseries",
-      "title": "Memory by Service",
+      "title": "RAM By Service",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
         "x": 12,
-        "y": 12,
+        "y": 46,
         "w": 12,
         "h": 8
       },
@@ -588,7 +1085,7 @@
         },
         "tooltip": {
           "mode": "single",
-          "sort": "none",
+          "sort": "desc",
           "hideZeros": false
         }
       },
@@ -601,16 +1098,545 @@
       ]
     },
     {
-      "id": 9,
-      "type": "table",
-      "title": "Containers",
+      "id": 103,
+      "type": "row",
+      "title": "Stacks: Disk Size And IO",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 54,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 16,
+      "type": "bargauge",
+      "title": "Writable Layer Size By Stack",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
       },
       "gridPos": {
         "x": 0,
-        "y": 20,
+        "y": 55,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_size_rw_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}}"
+        }
+      ]
+    },
+    {
+      "id": 17,
+      "type": "bargauge",
+      "title": "RootFS Size By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 55,
+        "w": 12,
+        "h": 9
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "color"
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_size_rootfs_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}}"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "type": "timeseries",
+      "title": "Block Read By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_block_read_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}} read"
+        }
+      ]
+    },
+    {
+      "id": 19,
+      "type": "timeseries",
+      "title": "Block Write By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 64,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_block_write_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}} write"
+        }
+      ]
+    },
+    {
+      "id": 104,
+      "type": "row",
+      "title": "Stacks: Network",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 72,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 20,
+      "type": "timeseries",
+      "title": "Network RX By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 73,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_net_rx_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}} rx"
+        }
+      ]
+    },
+    {
+      "id": 21,
+      "type": "timeseries",
+      "title": "Network TX By Stack",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 73,
+        "w": 12,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "desc",
+          "hideZeros": false
+        }
+      },
+      "targets": [
+        {
+          "expr": "sum by (alias,stack) (docker_stack_container_net_tx_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "{{alias}} / {{stack}} tx"
+        }
+      ]
+    },
+    {
+      "id": 105,
+      "type": "row",
+      "title": "Containers: Details",
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 81,
+        "w": 24,
+        "h": 1
+      },
+      "panels": []
+    },
+    {
+      "id": 22,
+      "type": "table",
+      "title": "Top Containers By RAM",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 82,
+        "w": 24,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "expr": "topk(40, docker_stack_container_memory_usage_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 23,
+      "type": "table",
+      "title": "Top Containers By Writable Layer",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 92,
+        "w": 24,
+        "h": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "expr": "topk(40, docker_stack_container_size_rw_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"})",
+          "refId": "A",
+          "legendFormat": "",
+          "instant": true,
+          "range": false,
+          "format": "table"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "type": "table",
+      "title": "All Containers State",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 102,
         "w": 24,
         "h": 10
       },
@@ -651,65 +1677,6 @@
       "targets": [
         {
           "expr": "docker_stack_container_running{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\"}",
-          "refId": "A",
-          "legendFormat": "",
-          "instant": true,
-          "range": false,
-          "format": "table"
-        }
-      ]
-    },
-    {
-      "id": 10,
-      "type": "table",
-      "title": "Top Memory Containers",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
-      },
-      "gridPos": {
-        "x": 0,
-        "y": 30,
-        "w": 24,
-        "h": 10
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "cellOptions": {
-              "type": "auto"
-            },
-            "inspect": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
-          ],
-          "countRows": false,
-          "fields": ""
-        }
-      },
-      "targets": [
-        {
-          "expr": "topk(25, docker_stack_container_memory_usage_bytes{company=~\"$company\",alias=~\"$node\",stack=~\"$stack\",service=~\"$service\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
           "refId": "A",
           "legendFormat": "",
           "instant": true,
