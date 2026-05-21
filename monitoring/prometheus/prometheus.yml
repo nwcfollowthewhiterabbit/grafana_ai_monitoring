@@ -1,0 +1,42 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  - job_name: node_exporter_clients
+    static_configs:
+      - targets:
+          - cloud.greenleafpacific.com:9100
+        labels:
+          alias: cloud
+          company: greenleaf
+      - targets:
+          - 139.99.155.122:9100
+        labels:
+          alias: testing
+          company: greenleaf
+      - targets:
+          - 139.99.171.55:9100
+        labels:
+          alias: new
+          company: greenleaf
+      - targets:
+          - 172.17.0.1:19100
+        labels:
+          alias: test
+          company: my own
+      - targets:
+          - 64.227.115.196:9100
+        labels:
+          alias: payroll
+          company: rentall
+      - targets:
+          - 141.94.121.160:9100
+        labels:
+          alias: howbot
+          company: rentall

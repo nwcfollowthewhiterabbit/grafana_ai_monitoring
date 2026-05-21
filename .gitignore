@@ -1,0 +1,9 @@
+.DS_Store
+*.bak
+*.tmp
+.env
+*.key
+id_*
+*_ed25519
+*_rsa
+
