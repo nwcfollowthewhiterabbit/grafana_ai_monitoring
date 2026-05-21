@@ -40,3 +40,31 @@ scrape_configs:
         labels:
           alias: howbot
           company: rentall
+
+  - job_name: cadvisor_clients
+    static_configs:
+      - targets:
+          - cloud.greenleafpacific.com:18082
+        labels:
+          alias: cloud
+          company: greenleaf
+      - targets:
+          - 139.99.155.122:18082
+        labels:
+          alias: testing
+          company: greenleaf
+      - targets:
+          - 172.17.0.1:19101
+        labels:
+          alias: test
+          company: my own
+      - targets:
+          - 64.227.115.196:18082
+        labels:
+          alias: payroll
+          company: rentall
+      - targets:
+          - 141.94.121.160:18082
+        labels:
+          alias: howbot
+          company: rentall
