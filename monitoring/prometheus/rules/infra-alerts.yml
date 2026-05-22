@@ -1,0 +1,57 @@
+groups:
+  - name: infrastructure
+    interval: 30s
+    rules:
+      - alert: NodeDown
+        expr: up{job="node_exporter_clients"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node {{ $labels.alias }} is down"
+          description: "Prometheus cannot scrape node_exporter on {{ $labels.alias }} / {{ $labels.company }}."
+
+      - alert: CadvisorDown
+        expr: up{job="cadvisor_clients"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "cAdvisor is down on {{ $labels.alias }}"
+          description: "Container runtime metrics are missing for {{ $labels.alias }} / {{ $labels.company }}."
+
+      - alert: RootDiskLow
+        expr: (node_filesystem_avail_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}) * 100 < 15
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low root disk space on {{ $labels.alias }}"
+          description: "Root filesystem free space is below 15% on {{ $labels.alias }}."
+
+      - alert: HostMemoryHigh
+        expr: (1 - (node_memory_MemAvailable_bytes{job="node_exporter_clients"} / node_memory_MemTotal_bytes{job="node_exporter_clients"})) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High host memory usage on {{ $labels.alias }}"
+          description: "Host memory usage is above 90% on {{ $labels.alias }}."
+
+      - alert: ServiceContainerStopped
+        expr: docker_stack_container_running{state!="running"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container stopped: {{ $labels.alias }}/{{ $labels.stack }}/{{ $labels.service }}"
+          description: "Container {{ $labels.container }} in stack {{ $labels.stack }} is not running."
+
+      - alert: StackMetricsStale
+        expr: time() - node_textfile_mtime_seconds{job="node_exporter_clients",file=~".*docker-stacks.prom"} > 900
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Docker stack metrics are stale on {{ $labels.alias }}"
+          description: "The docker stack textfile exporter has not refreshed for more than 15 minutes."

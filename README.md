@@ -13,8 +13,11 @@ Prometheus and Grafana provisioning for client server monitoring.
 ## Files
 
 - `monitoring/prometheus/prometheus.yml` - Prometheus scrape config.
+- `monitoring/prometheus/rules/` - Prometheus alert rules for node, cAdvisor, disk, memory, container state, and stale stack metrics.
+- `monitoring/promtail/config.template.yml` - Docker log collection template for client nodes.
 - `monitoring/grafana/provisioning/dashboards/` - Grafana dashboard provisioning.
 - `monitoring/grafana/provisioning/datasources/` - Grafana datasource provisioning.
+- `monitoring/docker-compose.yml` - monitoring stack compose file used on `con`.
 - `systemd/prometheus-test-tunnel.service` - persistent reverse SSH tunnel from `test` to `con`.
 
 ## Runtime Notes
@@ -45,9 +48,14 @@ docker exec monitoring-prometheus promtool check config /etc/prometheus/promethe
 docker kill -s HUP monitoring-prometheus
 ```
 
+After changing alert rules or compose mounts:
+
+```bash
+docker compose up -d prometheus
+```
+
 After changing dashboard provisioning:
 
 ```bash
 docker restart monitoring-grafana
 ```
-
