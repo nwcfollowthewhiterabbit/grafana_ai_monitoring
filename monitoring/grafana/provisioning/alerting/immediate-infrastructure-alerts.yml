@@ -58,9 +58,11 @@ groups:
             description: The rclone/Wasabi mount is not mounted or cannot be listed. Backups may not be reaching S3/Wasabi.
             summary: 'cloud: /greenleafbackup is not healthy for more than 30 minutes'
           labels:
+            category: backup
             managed_by: codex
             notify: immediate
             severity: critical
+            workspace: greenleaf
           isPaused: false
         - uid: cloud-erp-backup-stale
           title: Cloud ERP backup did not refresh
@@ -115,9 +117,11 @@ groups:
             description: ERP backup runs every 6 hours. This fires after the one-hour grace period when a new backup did not appear.
             summary: 'cloud: ERP backup is older than 7 hours'
           labels:
+            category: backup
             managed_by: codex
             notify: immediate
             severity: critical
+            workspace: greenleaf
           isPaused: false
         - uid: cloud-daily-stack-backup-stale
           title: Cloud daily stack backup did not refresh
@@ -172,9 +176,11 @@ groups:
             description: Daily stack backup runs at 02:00 UTC. This fires after the one-hour grace period if a new backup did not appear.
             summary: 'cloud: one or more non-ERP stack backups are missing or older than 25 hours'
           labels:
+            category: backup
             managed_by: codex
             notify: immediate
             severity: critical
+            workspace: greenleaf
           isPaused: false
         - uid: public-site-down
           title: Public site is unavailable
@@ -229,7 +235,9 @@ groups:
             description: Blackbox HTTP probe failed. This includes DNS, TLS, TCP, timeout, redirect, or HTTP/server availability failures.
             summary: Public site probe failed
           labels:
+            category: availability
             managed_by: codex
             notify: immediate
             severity: critical
+            workspace: greenleaf
           isPaused: false
