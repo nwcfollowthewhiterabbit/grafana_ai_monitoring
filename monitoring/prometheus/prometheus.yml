@@ -14,6 +14,11 @@ scrape_configs:
   - job_name: node_exporter_clients
     static_configs:
       - targets:
+          - node-exporter-con:9100
+        labels:
+          alias: con
+          company: my own
+      - targets:
           - cloud.greenleafpacific.com:9100
         labels:
           alias: cloud
@@ -46,6 +51,11 @@ scrape_configs:
 
   - job_name: cadvisor_clients
     static_configs:
+      - targets:
+          - cadvisor-con:8080
+        labels:
+          alias: con
+          company: my own
       - targets:
           - cloud.greenleafpacific.com:18082
         labels:

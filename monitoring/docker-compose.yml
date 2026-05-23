@@ -39,6 +39,36 @@ services:
       - /var/lib/monitoring/prometheus:/prometheus
     depends_on:
       - blackbox
+      - node-exporter-con
+      - cadvisor-con
+
+  node-exporter-con:
+    image: prom/node-exporter:v1.9.1
+    container_name: monitoring-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/textfile
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+      - --collector.filesystem.fs-types-exclude=^(sysfs|procfs|devtmpfs|tmpfs|overlay|cgroup2?)$
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+      - /var/lib/node-exporter-textfile:/textfile:ro
+
+  cadvisor-con:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    container_name: monitoring-cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
 
   blackbox:
     image: prom/blackbox-exporter:v0.27.0

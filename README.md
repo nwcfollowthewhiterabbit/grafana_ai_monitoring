@@ -8,7 +8,7 @@ Prometheus and Grafana provisioning for client server monitoring.
 | --- | --- |
 | greenleaf | cloud, testing, new |
 | rentall | payroll, howbot |
-| my own | test |
+| my own | test, con |
 
 ## Files
 
@@ -30,6 +30,9 @@ Prometheus and Grafana provisioning for client server monitoring.
 
 - `test` is behind NAT and is monitored through a reverse SSH tunnel:
   `test:127.0.0.1:9100 -> con:172.17.0.1:19100`.
+- `con` is monitored locally through compose services `node-exporter-con`
+  and `cadvisor-con`; its Docker stack metrics are exported through the
+  node_exporter textfile collector.
 - `new` is currently configured in Prometheus but remains down until `node_exporter`
   is installed/listening on `139.99.171.55:9100` and the host is reachable.
 - Grafana-managed alert rules are provisioned in
