@@ -1,0 +1,6 @@
+[Unit]
+Description=Export Greenleaf cloud backup metrics for node_exporter
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/cloud-backup-metrics.sh

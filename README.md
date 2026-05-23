@@ -21,6 +21,9 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `monitoring/grafana/provisioning/dashboards/` - Grafana dashboard provisioning.
 - `monitoring/grafana/provisioning/datasources/` - Grafana datasource provisioning.
 - `monitoring/docker-compose.yml` - monitoring stack compose file used on `con`.
+- `scripts/cloud-backup-metrics.sh` - `cloud` backup health exporter for node_exporter textfile collection.
+- `scripts/cloud-run-daily-backups.sh` - corrected `cloud` daily backup wrapper for all non-ERP stacks.
+- `systemd/cloud-backup-metrics.*` - timer for the `cloud` backup health exporter.
 - `systemd/prometheus-test-tunnel.service` - persistent reverse SSH tunnel from `test` to `con`.
 
 ## Runtime Notes
