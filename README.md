@@ -14,6 +14,9 @@ Prometheus and Grafana provisioning for client server monitoring.
 
 - `monitoring/prometheus/prometheus.yml` - Prometheus scrape config.
 - `monitoring/prometheus/rules/` - Prometheus alert rules for node, cAdvisor, disk, memory, container state, and stale stack metrics.
+- `monitoring/blackbox/config.yml` - Blackbox Exporter HTTP probe configuration.
+- `monitoring/service-catalog.yml` - service inventory, public endpoints, and pending discovery list.
+- `monitoring/alloy/config.template.alloy` - future Grafana Alloy collector template for OpenTelemetry-ready collection.
 - `monitoring/promtail/config.template.yml` - Docker log collection template for client nodes.
 - `monitoring/grafana/provisioning/dashboards/` - Grafana dashboard provisioning.
 - `monitoring/grafana/provisioning/datasources/` - Grafana datasource provisioning.
@@ -26,6 +29,8 @@ Prometheus and Grafana provisioning for client server monitoring.
   `test:127.0.0.1:9100 -> con:172.17.0.1:19100`.
 - `new` is currently configured in Prometheus but remains down until `node_exporter`
   is installed/listening on `139.99.171.55:9100` and the host is reachable.
+- Alert notification routing is deferred to the roadmap. Do not add Grafana
+  contact points or escalation policy until that phase starts.
 
 ## Apply
 

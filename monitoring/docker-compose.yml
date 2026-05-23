@@ -37,6 +37,19 @@ services:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/rules:/etc/prometheus/rules:ro
       - /var/lib/monitoring/prometheus:/prometheus
+    depends_on:
+      - blackbox
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.27.0
+    container_name: monitoring-blackbox
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    ports:
+      - "127.0.0.1:9115:9115"
+    volumes:
+      - ./blackbox/config.yml:/etc/blackbox_exporter/config.yml:ro
 
   loki:
     image: grafana/loki:2.9.8

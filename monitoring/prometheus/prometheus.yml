@@ -71,3 +71,80 @@ scrape_configs:
         labels:
           alias: howbot
           company: rentall
+
+  - job_name: blackbox
+    static_configs:
+      - targets:
+          - blackbox:9115
+
+  - job_name: blackbox_http_services
+    metrics_path: /probe
+    params:
+      module:
+        - http_2xx
+    static_configs:
+      - targets:
+          - https://greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: greenleafpacificcom
+          service: app
+          criticality: high
+      - targets:
+          - https://erp.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: erpgreenleafpacificcom
+          service: frontend
+          criticality: critical
+      - targets:
+          - https://cgi.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: cgigreenleafpacificcom
+          service: app
+          criticality: high
+      - targets:
+          - https://sg.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: sggreenleafpacificcom
+          service: app
+          criticality: high
+      - targets:
+          - https://spa.com.fj
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: spacomfj
+          service: app
+          criticality: high
+      - targets:
+          - https://furniture.com.fj
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: furniturecomfj
+          service: app
+          criticality: high
+      - targets:
+          - https://bulataxi.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: bulataxicom
+          service: app
+          criticality: high
+    relabel_configs:
+      - source_labels:
+          - __address__
+        target_label: __param_target
+      - source_labels:
+          - __param_target
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115

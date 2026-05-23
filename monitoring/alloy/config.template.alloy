@@ -1,0 +1,62 @@
+prometheus.remote_write "grafana_prometheus" {
+  endpoint {
+    url = "https://grafana.exemstsc.world/api/v1/write"
+
+    basic_auth {
+      username = "agent"
+      password = env("REMOTE_WRITE_PASSWORD")
+    }
+  }
+}
+
+loki.write "grafana_loki" {
+  endpoint {
+    url = "https://grafana.exemstsc.world/loki/api/v1/push"
+
+    basic_auth {
+      username = "promtail"
+      password = env("PROMTAIL_PASSWORD")
+    }
+  }
+}
+
+discovery.docker "containers" {
+  host             = "unix:///var/run/docker.sock"
+  refresh_interval = "30s"
+}
+
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    target_label = "company"
+    replacement  = env("COMPANY")
+  }
+
+  rule {
+    target_label = "alias"
+    replacement  = env("ALIAS")
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "stack"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+}
+
+loki.source.docker "containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.docker_logs.output
+  forward_to = [loki.write.grafana_loki.receiver]
+}

@@ -1,0 +1,113 @@
+version: 1
+
+labels:
+  required:
+    - company
+    - alias
+    - stack
+    - service
+    - criticality
+  company_values:
+    - greenleaf
+    - rentall
+    - my own
+
+nodes:
+  - alias: cloud
+    company: greenleaf
+    role: production
+  - alias: testing
+    company: greenleaf
+    role: staging
+  - alias: new
+    company: greenleaf
+    role: production
+    status: pending_access
+  - alias: test
+    company: my own
+    role: lab
+    network: nat_reverse_tunnel
+  - alias: payroll
+    company: rentall
+    role: production
+  - alias: howbot
+    company: rentall
+    role: production
+
+http_services:
+  - company: greenleaf
+    alias: cloud
+    stack: greenleafpacificcom
+    service: app
+    url: https://greenleafpacific.com
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: erpgreenleafpacificcom
+    service: frontend
+    url: https://erp.greenleafpacific.com
+    criticality: critical
+  - company: greenleaf
+    alias: cloud
+    stack: cgigreenleafpacificcom
+    service: app
+    url: https://cgi.greenleafpacific.com
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: sggreenleafpacificcom
+    service: app
+    url: https://sg.greenleafpacific.com
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: spacomfj
+    service: app
+    url: https://spa.com.fj
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: furniturecomfj
+    service: app
+    url: https://furniture.com.fj
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: bulataxicom
+    service: app
+    url: https://bulataxi.com
+    criticality: high
+
+pending_discovery:
+  - company: greenleaf
+    alias: cloud
+    stacks:
+      - beautylabspacomfj
+      - fijipacificcleaning
+      - pacificcleaning
+      - trexfijicom
+  - company: greenleaf
+    alias: testing
+    stacks:
+      - company-monitor
+      - pterodactyl
+      - wordpress
+  - company: rentall
+    alias: howbot
+    stacks:
+      - howprod
+      - receipt-paybot
+  - company: rentall
+    alias: payroll
+    stacks:
+      - payrollbot21
+  - company: my own
+    alias: test
+    stacks:
+      - erpnext3pl
+      - estimator-bot20
+      - kzpo-report-bot
+      - receipt-paybot
+      - report-service
+      - webtrees
+      - woocommerce
