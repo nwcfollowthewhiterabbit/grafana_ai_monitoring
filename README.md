@@ -32,8 +32,10 @@ Prometheus and Grafana provisioning for client server monitoring.
   `test:127.0.0.1:9100 -> con:172.17.0.1:19100`.
 - `new` is currently configured in Prometheus but remains down until `node_exporter`
   is installed/listening on `139.99.171.55:9100` and the host is reachable.
-- Alert notification routing is deferred to the roadmap. Do not add Grafana
-  contact points or escalation policy until that phase starts.
+- Grafana-managed alert rules are provisioned in
+  `monitoring/grafana/provisioning/alerting/immediate-infrastructure-alerts.yml`.
+  A real contact point still needs Telegram, email/SMTP, Slack, or webhook
+  credentials before notifications can be delivered.
 
 ## Apply
 

@@ -1,0 +1,235 @@
+apiVersion: 1
+groups:
+    - orgId: 1
+      name: Immediate Infrastructure Alerts
+      folder: Nodes
+      interval: 1m
+      rules:
+        - uid: cloud-s3-mount-down
+          title: Cloud S3 Wasabi mount is unhealthy
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: 1 - greenleaf_backup_mount_healthy{alias="cloud",path="/greenleafbackup"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 30m
+          annotations:
+            description: The rclone/Wasabi mount is not mounted or cannot be listed. Backups may not be reaching S3/Wasabi.
+            summary: 'cloud: /greenleafbackup is not healthy for more than 30 minutes'
+          labels:
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: cloud-erp-backup-stale
+          title: Cloud ERP backup did not refresh
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: ((time() - greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack="erp.greenleafpacific.com"}) > 25200) or (greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack="erp.greenleafpacific.com"} == 0)
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: ERP backup runs every 6 hours. This fires after the one-hour grace period when a new backup did not appear.
+            summary: 'cloud: ERP backup is older than 7 hours'
+          labels:
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: cloud-daily-stack-backup-stale
+          title: Cloud daily stack backup did not refresh
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: ((time() - greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack!="erp.greenleafpacific.com"}) > 90000) or (greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack!="erp.greenleafpacific.com"} == 0)
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: Daily stack backup runs at 02:00 UTC. This fires after the one-hour grace period if a new backup did not appear.
+            summary: 'cloud: one or more non-ERP stack backups are missing or older than 25 hours'
+          labels:
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: public-site-down
+          title: Public site is unavailable
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: 1 - probe_success{job="blackbox_http_services"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 1m
+          annotations:
+            description: Blackbox HTTP probe failed. This includes DNS, TLS, TCP, timeout, redirect, or HTTP/server availability failures.
+            summary: Public site probe failed
+          labels:
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false

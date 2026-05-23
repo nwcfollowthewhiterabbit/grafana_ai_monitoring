@@ -16,14 +16,19 @@
 - Add backup verification metrics: last successful backup, backup size, restore-check age, and storage free space.
 - Add security/audit collection: SSH failures, sudo events, Docker restarts, pending updates, and exposed ports.
 
-## Later: Alerting
+## Alerting
 
-Alert notification routing is intentionally deferred. The current Prometheus rules can be used for visibility, but contact points, notification policies, escalation, and on-call routing should be designed as a separate phase.
+Grafana-managed alert rules exist for immediate infrastructure notifications:
 
-Planned alerting work:
+- `cloud-s3-mount-down`: `/greenleafbackup` unhealthy for more than 30 minutes.
+- `cloud-erp-backup-stale`: ERP backup older than 7 hours.
+- `cloud-daily-stack-backup-stale`: non-ERP stack backup missing or older than 25 hours.
+- `public-site-down`: any public blackbox HTTP probe fails for more than 1 minute.
+
+Pending notification delivery setup:
 
 - Telegram/email contact points.
-- Separate routing for critical and warning events.
+- Notification policy routing to the selected contact point.
 - Service-specific ownership from `monitoring/service-catalog.yml`.
 - Runbook links in every notification.
 - Noise control with grouping, inhibition, and maintenance windows.
