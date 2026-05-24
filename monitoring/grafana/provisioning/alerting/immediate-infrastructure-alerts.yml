@@ -52,7 +52,7 @@ groups:
                 refId: B
                 type: threshold
           noDataState: OK
-          execErrState: Error
+          execErrState: OK
           for: 30m
           annotations:
             description: The rclone/Wasabi mount is not mounted or cannot be listed. Backups may not be reaching S3/Wasabi.
