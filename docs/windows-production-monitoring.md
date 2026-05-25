@@ -53,11 +53,11 @@ Observed host identity:
 - OS: Windows Server 2025 Standard;
 - role: MSSQL Server, Hyper-V host and M.E.Doc server.
 
-Hosted VMs:
+Hosted VMs and routed sites:
 
 - `192.168.112.19`: RDP server and 1C server;
 - `192.168.112.1`: MikroTik router.
-- `192.168.1.1`: second MikroTik router reachable through `192.168.112.1`.
+- `192.168.1.1`: office MikroTik router, reachable through VPN routing on `192.168.112.1`.
 
 Collected metrics:
 
@@ -151,13 +151,20 @@ Address:
 192.168.112.1
 ```
 
-The second MikroTik is behind the primary router:
+The second MikroTik is the office router. The office LAN is behind it:
 
 ```text
-192.168.1.1 via 192.168.112.1
+office MikroTik: 192.168.1.1
+office LAN:     192.168.1.0/24
 ```
 
-`con` keeps a route for that remote subnet:
+VPN routing is arranged so these two networks can reach each other through the VPN server on `192.168.112.1`:
+
+```text
+192.168.112.0/24 <-> VPN server 192.168.112.1 <-> 192.168.1.0/24
+```
+
+`con` keeps a route for the office subnet:
 
 ```bash
 ip route replace 192.168.1.0/24 via 192.168.112.1 dev ppp0
