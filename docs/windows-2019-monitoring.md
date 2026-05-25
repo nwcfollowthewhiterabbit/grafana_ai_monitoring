@@ -64,6 +64,13 @@ Example:
     company: rentall
     workspace: rentoll
     role: hyperv
+- targets:
+    - 192.168.112.19:9182
+  labels:
+    alias: rentall-rdp
+    company: rentall
+    workspace: rentoll
+    role: rdp
 ```
 
 Then apply on `con`:
@@ -90,6 +97,7 @@ Rentall host notes:
 - Watched backup path: `D:\Backup`.
 - Important watched services include Hyper-V, SQL Server, SQL Browser, SQL Writer, Firebird/ZvitGrp, RDP services and Cloud Backup/Restore.
 - During initial inspection, the latest Windows Backup log contained VSS failure event `521` / `0x8100010C` on 2026-05-23, so backup-failure metrics are collected explicitly.
+- RDP VM `192.168.112.19` reports Windows Server 2016 Standard Evaluation, hostname `WIN-7N65LE8EF7H`; watched services are `TermService`, `SessionEnv`, `UmRdpService`, `Spooler`, `VSS`, and `vmicvss`.
 
 If some VMs are normally powered off, filter them in `windows-custom-metrics.ps1` or pause the VM rule until the expected VM list is known.
 

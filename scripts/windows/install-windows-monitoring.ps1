@@ -8,6 +8,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 function Get-LatestWindowsExporterVersion {
     $release = Invoke-RestMethod -Uri "https://api.github.com/repos/prometheus-community/windows_exporter/releases/latest" -UseBasicParsing
@@ -56,13 +57,21 @@ Copy-Item -Path (Join-Path $PSScriptRoot "windows-custom-metrics.ps1") -Destinat
 
 $servicesArg = $ServiceNames | ConvertTo-Json -Compress
 $backupPathsArg = $BackupPaths | ConvertTo-Json -Compress
-$actionArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$workDir\windows-custom-metrics.ps1`" -MetricsDir `"$MetricsDir`" -ServiceNamesJson '$servicesArg' -BackupPathsJson '$backupPathsArg'"
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArgs
-$trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration ([TimeSpan]::MaxValue)
-$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
-Register-ScheduledTask -TaskName "Grafana Windows Custom Metrics" -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
-Start-ScheduledTask -TaskName "Grafana Windows Custom Metrics"
+$collectorScript = Join-Path $workDir "collect-windows-custom-metrics.ps1"
+$runnerScript = Join-Path $workDir "run-custom-metrics.cmd"
+@(
+    ('${servicesJson} = ''{0}''' -f ($servicesArg -replace "'", "''")),
+    ('${backupPathsJson} = ''{0}''' -f ($backupPathsArg -replace "'", "''")),
+    ('& "{0}" -MetricsDir "{1}" -ServiceNamesJson ${servicesJson} -BackupPathsJson ${backupPathsJson}' -f (Join-Path $workDir "windows-custom-metrics.ps1"), $MetricsDir)
+) | Set-Content -Encoding ASCII -Path $collectorScript
+@(
+    "@echo off",
+    ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "{0}"' -f $collectorScript)
+) | Set-Content -Encoding ASCII -Path $runnerScript
+
+& $runnerScript
+schtasks.exe /Create /TN "Grafana Windows Custom Metrics" /SC MINUTE /MO 1 /TR "`"$runnerScript`"" /RU SYSTEM /RL HIGHEST /F | Out-Null
 
 Restart-Service windows_exporter -Force
 

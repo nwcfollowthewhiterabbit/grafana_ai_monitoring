@@ -5,3 +5,10 @@
     company: rentall
     workspace: rentoll
     role: hyperv
+- targets:
+    - 192.168.112.19:9182
+  labels:
+    alias: rentall-rdp
+    company: rentall
+    workspace: rentoll
+    role: rdp
