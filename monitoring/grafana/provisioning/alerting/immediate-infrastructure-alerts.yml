@@ -241,3 +241,298 @@ groups:
             severity: critical
             workspace: greenleaf
           isPaused: false
+    - orgId: 1
+      name: Windows Server Alerts
+      folder: Nodes
+      interval: 1m
+      rules:
+        - uid: windows-exporter-down
+          title: Windows exporter is down
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: 1 - up{job="windows_exporter_clients"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: Prometheus cannot scrape windows_exporter on the Windows Server target.
+            summary: Windows exporter is unreachable
+          labels:
+            category: windows
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: windows-watched-service-down
+          title: Watched Windows service is down
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: 1 - windows_custom_service_desired_running{job="windows_exporter_clients"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 2m
+          annotations:
+            description: A Windows service from the watched-service list is not running or is missing.
+            summary: Watched Windows service is down
+          labels:
+            category: windows
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: windows-hyperv-vm-not-running
+          title: Hyper-V VM is not running
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: windows_custom_hyperv_vm_state{job="windows_exporter_clients"} != bool 1
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: A discovered Hyper-V VM is not in Running state. Pause this rule or filter expected-off VMs if needed.
+            summary: Hyper-V VM is not running
+          labels:
+            category: windows
+            managed_by: codex
+            notify: immediate
+            severity: warning
+          isPaused: false
+        - uid: windows-backup-path-unavailable
+          title: Windows backup path is unavailable
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: 1 - windows_custom_backup_path_available{job="windows_exporter_clients"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 30m
+          annotations:
+            description: A configured Windows backup path cannot be listed for more than 30 minutes.
+            summary: Windows backup path is unavailable
+          labels:
+            category: backup
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: windows-backup-stale
+          title: Windows backup did not refresh
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: ((time() - windows_custom_backup_path_latest_timestamp_seconds{job="windows_exporter_clients"}) > 90000) or (windows_custom_backup_path_latest_timestamp_seconds{job="windows_exporter_clients"} == 0)
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 10m
+          annotations:
+            description: A watched Windows backup path has no new files for more than 25 hours.
+            summary: Windows backup did not refresh
+          labels:
+            category: backup
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false

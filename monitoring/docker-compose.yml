@@ -36,6 +36,7 @@ services:
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/rules:/etc/prometheus/rules:ro
+      - ./prometheus/file_sd:/etc/prometheus/file_sd:ro
       - /var/lib/monitoring/prometheus:/prometheus
     depends_on:
       - blackbox

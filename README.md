@@ -23,8 +23,10 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `monitoring/docker-compose.yml` - monitoring stack compose file used on `con`.
 - `scripts/cloud-backup-metrics.sh` - `cloud` backup health exporter for node_exporter textfile collection.
 - `scripts/cloud-run-daily-backups.sh` - corrected `cloud` daily backup wrapper for all non-ERP stacks.
+- `scripts/windows/` - Windows Server 2019 install and textfile metric scripts for services, Hyper-V VMs, and backups.
 - `systemd/cloud-backup-metrics.*` - timer for the `cloud` backup health exporter.
 - `systemd/prometheus-test-tunnel.service` - persistent reverse SSH tunnel from `test` to `con`.
+- `docs/windows-2019-monitoring.md` - Windows Server 2019 / Hyper-V monitoring runbook.
 
 ## Runtime Notes
 

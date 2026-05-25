@@ -1,0 +1,11 @@
+[]
+
+# Add Windows Server 2019 targets here after windows_exporter is installed.
+# Example:
+# - targets:
+#     - 10.0.0.25:9182
+#   labels:
+#     alias: win2019
+#     company: my own
+#     workspace: personal
+#     role: hyperv

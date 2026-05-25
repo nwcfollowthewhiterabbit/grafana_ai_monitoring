@@ -82,6 +82,11 @@ scrape_configs:
           alias: howbot
           company: rentall
 
+  - job_name: windows_exporter_clients
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/file_sd/windows_targets.yml
+
   - job_name: blackbox
     static_configs:
       - targets:
