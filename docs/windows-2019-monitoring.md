@@ -46,7 +46,7 @@ This Rentall site is reachable from `con` through the Rentall VPN:
 - Host OS / Hyper-V / SQL / M.E.Doc / VM backups / VM RDP: `192.168.112.20`.
 - RDP VM: `192.168.112.19`.
 
-Current VPN status: IPsec and L2TP/PPP establish successfully from `con`; `con` receives `192.168.112.68`, and both `192.168.112.1` and `192.168.112.20` respond to ping.
+Current VPN status: IPsec and L2TP/PPP establish successfully from `con`; `con` receives `192.168.112.18`, and both `192.168.112.1` and `192.168.112.20` respond to ping.
 
 After VPN is up and `windows_exporter` is installed on `192.168.112.20`, add the Windows target to:
 
@@ -103,7 +103,7 @@ Smoke test from `con` after SNMP is enabled:
 curl 'http://172.17.0.1:9116/snmp?auth=public_v2&module=if_mib&target=192.168.112.1'
 ```
 
-Current SNMP status: ICMP reaches `192.168.112.1`, but SNMP returns `connection refused`. Enable SNMP on RouterOS and allow the VPN source IP, currently `192.168.112.68`, or the full monitoring VPN pool.
+Current SNMP status: ICMP reaches `192.168.112.1`, but SNMP returns `connection refused`. Enable SNMP on RouterOS and allow the VPN source IP, currently `192.168.112.18`, or the full monitoring VPN pool.
 
 After the VPN is up, add the MikroTik target to:
 
