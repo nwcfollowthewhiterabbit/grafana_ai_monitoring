@@ -103,7 +103,7 @@ Smoke test from `con` after SNMP is enabled:
 curl 'http://172.17.0.1:9116/snmp?auth=public_v2&module=if_mib&target=192.168.112.1'
 ```
 
-Current SNMP status: ICMP reaches `192.168.112.1`, but SNMP returns `connection refused`. Enable SNMP on RouterOS and allow the VPN source IP, currently `192.168.112.18`, or the full monitoring VPN pool.
+Current SNMP status: ICMP reaches `192.168.112.1`, and SNMP polling through `snmp_exporter` works from VPN source IP `192.168.112.18`.
 
 After the VPN is up, add the MikroTik target to:
 

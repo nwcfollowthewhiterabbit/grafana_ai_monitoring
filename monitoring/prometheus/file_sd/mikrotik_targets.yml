@@ -1,14 +1,8 @@
-[]
-
-# MikroTik targets are scraped through snmp_exporter on con over the Rentall VPN.
-# MikroTik VM: 192.168.112.1
-#
-# Example:
-# - targets:
-#     - 192.168.112.1
-#   labels:
-#     alias: rentall-mikrotik
-#     company: rentall
-#     workspace: rentoll
-#     role: router
-#     parent_host: win2019
+- targets:
+    - 192.168.112.1
+  labels:
+    alias: rentall-mikrotik
+    company: rentall
+    workspace: rentoll
+    role: router
+    parent_host: win2019
