@@ -22,6 +22,41 @@ function Convert-JsonList([string]$Json) {
     return @($value | ForEach-Object { $_ })
 }
 
+function Convert-IdleToSeconds([string]$Idle) {
+    if (-not $Idle -or $Idle -eq ".") { return 0 }
+    if ($Idle -match "^(?<days>\d+)\+(?<hours>\d+):(?<minutes>\d+)$") {
+        return (([int]$Matches.days * 86400) + ([int]$Matches.hours * 3600) + ([int]$Matches.minutes * 60))
+    }
+    if ($Idle -match "^(?<hours>\d+):(?<minutes>\d+)$") {
+        return (([int]$Matches.hours * 3600) + ([int]$Matches.minutes * 60))
+    }
+    if ($Idle -match "^\d+$") {
+        return ([int]$Idle * 60)
+    }
+    return 0
+}
+
+function Convert-LogonToUnixTime([string]$LogonTime) {
+    if (-not $LogonTime) { return 0 }
+    $culture = [System.Globalization.CultureInfo]::CurrentCulture
+    $styles = [System.Globalization.DateTimeStyles]::AssumeLocal
+    $date = [datetime]::MinValue
+    $formats = @(
+        "dd.MM.yyyy HH:mm",
+        "d.M.yyyy H:mm",
+        "M/d/yyyy h:mm tt",
+        "M/d/yyyy H:mm",
+        "MM/dd/yyyy HH:mm"
+    )
+    if ([datetime]::TryParseExact($LogonTime, $formats, $culture, $styles, [ref]$date)) {
+        return Unix-Time $date.ToUniversalTime()
+    }
+    if ([datetime]::TryParse($LogonTime, $culture, $styles, [ref]$date)) {
+        return Unix-Time $date.ToUniversalTime()
+    }
+    return 0
+}
+
 $serviceNames = @()
 $backupPaths = @()
 if ($ServiceNamesJson) { $serviceNames = Convert-JsonList $ServiceNamesJson }
@@ -121,6 +156,56 @@ catch {
 $lines.Add(('windows_custom_windows_backup_last_success_timestamp_seconds {0}' -f $lastBackupSuccess))
 $lines.Add(('windows_custom_windows_backup_last_failure_timestamp_seconds {0}' -f $lastBackupFailure))
 $lines.Add(('windows_custom_windows_backup_last_failure_event_id {0}' -f $lastBackupFailureId))
+
+$lines.Add("# HELP windows_custom_rdp_session_idle_seconds Idle time for interactive Windows sessions from quser.")
+$lines.Add("# TYPE windows_custom_rdp_session_idle_seconds gauge")
+$lines.Add("# HELP windows_custom_rdp_session_last_input_timestamp_seconds Estimated last input timestamp for interactive Windows sessions from quser idle time.")
+$lines.Add("# TYPE windows_custom_rdp_session_last_input_timestamp_seconds gauge")
+$lines.Add("# HELP windows_custom_rdp_session_logon_timestamp_seconds Session logon timestamp from quser.")
+$lines.Add("# TYPE windows_custom_rdp_session_logon_timestamp_seconds gauge")
+$lines.Add("# HELP windows_custom_rdp_session_active Whether the interactive Windows session is active.")
+$lines.Add("# TYPE windows_custom_rdp_session_active gauge")
+
+try {
+    $now = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+    $sessions = quser 2>$null
+    foreach ($line in $sessions | Select-Object -Skip 1) {
+        $clean = ([string]$line).Trim()
+        if (-not $clean) { continue }
+        $clean = $clean -replace "^\>", ""
+        $match = [regex]::Match($clean, "^(?<user>\S+)\s+(?:(?<session>\S+)\s+)?(?<id>\d+)\s+(?<state>\S+)\s+(?<idle>\S+)\s+(?<logon>.+)$")
+        if (-not $match.Success) { continue }
+
+        $sessionRaw = $match.Groups["session"].Value
+        $stateRaw = $match.Groups["state"].Value
+        $stateValue = "other"
+        if ($stateRaw -eq "Active" -or ($sessionRaw -and $stateRaw -ne "Disc")) {
+            $stateValue = "active"
+        }
+        elseif ($stateRaw -eq "Disc" -or -not $sessionRaw) {
+            $stateValue = "disc"
+        }
+
+        $user = Escape-Label $match.Groups["user"].Value
+        $session = Escape-Label $sessionRaw
+        $id = Escape-Label $match.Groups["id"].Value
+        $state = Escape-Label $stateValue
+        $idleSeconds = Convert-IdleToSeconds $match.Groups["idle"].Value
+        $lastInput = $now - $idleSeconds
+        $logon = Convert-LogonToUnixTime $match.Groups["logon"].Value.Trim()
+        $active = 0
+        if ($stateValue -eq "active") { $active = 1 }
+
+        $label = 'user="{0}",session="{1}",id="{2}",state="{3}"' -f $user, $session, $id, $state
+        $lines.Add(('windows_custom_rdp_session_idle_seconds{{{0}}} {1}' -f $label, $idleSeconds))
+        $lines.Add(('windows_custom_rdp_session_last_input_timestamp_seconds{{{0}}} {1}' -f $label, $lastInput))
+        $lines.Add(('windows_custom_rdp_session_logon_timestamp_seconds{{{0}}} {1}' -f $label, $logon))
+        $lines.Add(('windows_custom_rdp_session_active{{{0}}} {1}' -f $label, $active))
+    }
+}
+catch {
+    $lines.Add(('windows_custom_rdp_session_collection_error{{error="{0}"}} 1' -f (Escape-Label $_.Exception.Message)))
+}
 
 $tmp = Join-Path $MetricsDir "windows_custom.prom.tmp"
 $out = Join-Path $MetricsDir "windows_custom.prom"

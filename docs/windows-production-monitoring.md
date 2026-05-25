@@ -177,6 +177,12 @@ MikroTik SNMP is restricted to the VPN source address:
 
 ## Dashboards
 
+Rentall summary dashboard:
+
+```text
+https://grafana.exemstsc.world/d/rentall-overview/rentall-overview
+```
+
 Windows dashboard:
 
 ```text
@@ -188,6 +194,15 @@ Dashboard title:
 ```text
 Windows Server / Hyper-V
 ```
+
+The Rentall summary dashboard includes a dedicated RDP activity section for `192.168.112.19`. It is based on `quser` output collected into Prometheus metrics:
+
+- `windows_custom_rdp_session_idle_seconds`;
+- `windows_custom_rdp_session_last_input_timestamp_seconds`;
+- `windows_custom_rdp_session_logon_timestamp_seconds`;
+- `windows_custom_rdp_session_active`.
+
+Use the `RDP Last Activity Time` and `RDP Idle Time` panels before rebooting the RDP / 1C VM. An active session with low idle time means a user is likely using the server; a disconnected or long-idle session is safer to coordinate for reboot.
 
 MikroTik dashboard:
 

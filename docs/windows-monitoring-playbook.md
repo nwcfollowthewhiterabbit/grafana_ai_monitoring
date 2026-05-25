@@ -16,6 +16,7 @@ The installer in `scripts/windows/install-windows-monitoring.ps1` also sets up a
 - Hyper-V VM state and uptime, when Hyper-V PowerShell cmdlets exist;
 - watched backup paths;
 - latest Windows Server Backup success/failure events.
+- Remote Desktop session activity from `quser`.
 
 ## Prerequisites
 
@@ -135,7 +136,27 @@ Expected signals:
 windows_exporter_collector_success{collector="textfile"} 1
 windows_memory_physical_total_bytes ...
 windows_custom_service_desired_running{service="...",state="Running"} 1
+windows_custom_rdp_session_idle_seconds{user="...",state="active"} ...
 ```
+
+## RDP Activity Metrics
+
+The custom textfile script runs `quser` and exports one series per interactive session:
+
+```text
+windows_custom_rdp_session_idle_seconds
+windows_custom_rdp_session_last_input_timestamp_seconds
+windows_custom_rdp_session_logon_timestamp_seconds
+windows_custom_rdp_session_active
+```
+
+Use these metrics to decide whether it is safe to reboot an RDP server:
+
+- `state="active"` and low `idle_seconds`: the user is likely working now;
+- `state="active"` and high `idle_seconds`: the session is open but probably idle;
+- `state="disc"`: disconnected session.
+
+The script normalizes localized Windows session states into ASCII labels: `active`, `disc`, or `other`.
 
 ## Add Prometheus Target
 
