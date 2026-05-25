@@ -205,7 +205,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - windows_memory_available_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"} / windows_cs_physical_memory_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"})",
+          "expr": "100 * (1 - windows_memory_available_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"} / windows_memory_physical_total_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"})",
           "legendFormat": "{{alias}} RAM",
           "range": true,
           "refId": "A"
@@ -457,7 +457,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - windows_memory_available_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"} / windows_cs_physical_memory_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"})",
+          "expr": "100 * (1 - windows_memory_available_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"} / windows_memory_physical_total_bytes{job=\"windows_exporter_clients\",alias=\"$alias\"})",
           "legendFormat": "RAM",
           "range": true,
           "refId": "B"
