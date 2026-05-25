@@ -536,3 +536,124 @@ groups:
             notify: immediate
             severity: critical
           isPaused: false
+    - orgId: 1
+      name: MikroTik Alerts
+      folder: Nodes
+      interval: 1m
+      rules:
+        - uid: mikrotik-snmp-down
+          title: MikroTik SNMP scrape is down
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: 1 - up{job="mikrotik_snmp"}
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: Prometheus cannot scrape MikroTik through the VPN SNMP exporter.
+            summary: MikroTik SNMP monitoring is unavailable
+          labels:
+            category: mikrotik
+            managed_by: codex
+            notify: immediate
+            severity: critical
+          isPaused: false
+        - uid: mikrotik-interface-down
+          title: MikroTik interface is not up
+          condition: B
+          data:
+            - refId: A
+              relativeTimeRange:
+                from: 600
+                to: 0
+              datasourceUid: PBFA97CFB590B2093
+              model:
+                datasource:
+                    type: prometheus
+                    uid: PBFA97CFB590B2093
+                editorMode: code
+                expr: ifOperStatus{job="mikrotik_snmp"} != bool 1
+                instant: true
+                intervalMs: 1000
+                legendFormat: __auto
+                maxDataPoints: 43200
+                range: false
+                refId: A
+            - refId: B
+              datasourceUid: __expr__
+              model:
+                conditions:
+                    - evaluator:
+                        params:
+                            - 0
+                        type: gt
+                      operator:
+                        type: and
+                      query:
+                        params:
+                            - A
+                      reducer:
+                        params: []
+                        type: last
+                      type: query
+                datasource:
+                    type: __expr__
+                    uid: __expr__
+                expression: A
+                intervalMs: 1000
+                maxDataPoints: 43200
+                refId: B
+                type: threshold
+          noDataState: OK
+          execErrState: Error
+          for: 5m
+          annotations:
+            description: An SNMP-discovered MikroTik interface is not operationally up. Filter expected-down ports after discovery if needed.
+            summary: MikroTik interface is not up
+          labels:
+            category: mikrotik
+            managed_by: codex
+            notify: immediate
+            severity: warning
+          isPaused: false

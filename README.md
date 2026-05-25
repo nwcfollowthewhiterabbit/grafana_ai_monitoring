@@ -26,7 +26,8 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `scripts/windows/` - Windows Server 2019 install and textfile metric scripts for services, Hyper-V VMs, and backups.
 - `systemd/cloud-backup-metrics.*` - timer for the `cloud` backup health exporter.
 - `systemd/prometheus-test-tunnel.service` - persistent reverse SSH tunnel from `test` to `con`.
-- `docs/windows-2019-monitoring.md` - Windows Server 2019 / Hyper-V monitoring runbook.
+- `systemd/rentall-vpn.service` - Rentall L2TP/IPsec VPN bootstrap service on `con`.
+- `docs/windows-2019-monitoring.md` - Windows Server 2019 / Hyper-V / MikroTik-behind-NAT monitoring runbook.
 
 ## Runtime Notes
 

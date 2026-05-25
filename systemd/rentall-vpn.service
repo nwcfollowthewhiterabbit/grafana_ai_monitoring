@@ -1,0 +1,16 @@
+[Unit]
+Description=Rentall L2TP/IPsec VPN for monitoring
+After=network-online.target strongswan-starter.service xl2tpd.service
+Wants=network-online.target strongswan-starter.service xl2tpd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=/bin/systemctl start strongswan-starter xl2tpd
+ExecStart=/usr/sbin/ipsec up rentall-l2tp
+ExecStartPost=/bin/sh -c 'echo "c rentall" > /var/run/xl2tpd/l2tp-control'
+ExecStop=/bin/sh -c 'echo "d rentall" > /var/run/xl2tpd/l2tp-control 2>/dev/null || true'
+ExecStopPost=/usr/sbin/ipsec down rentall-l2tp
+
+[Install]
+WantedBy=multi-user.target

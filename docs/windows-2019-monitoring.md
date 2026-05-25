@@ -40,7 +40,15 @@ Get-Content C:\ProgramData\windows_exporter\textfile_inputs\windows_custom.prom
 
 ## Prometheus Target
 
-After the Windows host is reachable from `con`, add it to:
+This Rentall site is reachable from `con` through the Rentall VPN:
+
+- MikroTik VM: `192.168.112.1`.
+- Host OS / Hyper-V / SQL / M.E.Doc / VM backups / VM RDP: `192.168.112.20`.
+- RDP VM: `192.168.112.19`.
+
+Current VPN status: IPsec and L2TP/PPP establish successfully from `con`; `con` receives `192.168.112.68`, and both `192.168.112.1` and `192.168.112.20` respond to ping.
+
+After VPN is up and `windows_exporter` is installed on `192.168.112.20`, add the Windows target to:
 
 ```text
 monitoring/prometheus/file_sd/windows_targets.yml
@@ -50,11 +58,11 @@ Example:
 
 ```yaml
 - targets:
-    - 10.0.0.25:9182
+    - 192.168.112.20:9182
   labels:
     alias: win2019
-    company: my own
-    workspace: personal
+    company: rentall
+    workspace: rentoll
     role: hyperv
 ```
 
@@ -77,3 +85,53 @@ Provisioned Grafana rules:
 - `windows-backup-stale`: watched backup path has no new files for 25 hours.
 
 If some VMs are normally powered off, filter them in `windows-custom-metrics.ps1` or pause the VM rule until the expected VM list is known.
+
+## MikroTik VM Monitoring
+
+The MikroTik router is a VM on this Windows/Hyper-V host. Do not expose SNMP to the public internet. Prometheus scrapes `snmp_exporter` on `con`, and `snmp_exporter` polls the MikroTik through the VPN.
+
+On the MikroTik, enable SNMP read-only access for the VPN/client source used by `con`. RouterOS example:
+
+```routeros
+/snmp set enabled=yes
+/snmp community add name=grafana addresses=<con-vpn-client-ip>/32 read-access=yes
+```
+
+Smoke test from `con` after SNMP is enabled:
+
+```bash
+curl 'http://172.17.0.1:9116/snmp?auth=public_v2&module=if_mib&target=192.168.112.1'
+```
+
+Current SNMP status: ICMP reaches `192.168.112.1`, but SNMP returns `connection refused`. Enable SNMP on RouterOS and allow the VPN source IP, currently `192.168.112.68`, or the full monitoring VPN pool.
+
+After the VPN is up, add the MikroTik target to:
+
+```text
+monitoring/prometheus/file_sd/mikrotik_targets.yml
+```
+
+Example:
+
+```yaml
+- targets:
+    - 192.168.112.1
+  labels:
+    alias: rentall-mikrotik
+    company: rentall
+    workspace: rentoll
+    role: router
+    parent_host: win2019
+```
+
+Prometheus sends the `target` parameter to `snmp_exporter` on `con`:
+
+```text
+Prometheus -> snmp-exporter:9116 -> VPN -> MikroTik 192.168.112.1 UDP/161
+```
+
+Dashboard:
+
+```text
+https://grafana.exemstsc.world/d/mikrotik-router/mikrotik-router
+```
