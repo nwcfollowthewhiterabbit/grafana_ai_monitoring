@@ -29,7 +29,7 @@
       "title": "MikroTik detail",
       "tooltip": "Open MikroTik dashboard",
       "type": "link",
-      "url": "/d/mikrotik-router/mikrotik-router?var-alias=rentall-mikrotik"
+      "url": "/d/mikrotik-router/mikrotik-router?var-alias=All"
     }
   ],
   "panels": [
@@ -45,7 +45,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "[Windows Server / Hyper-V](https://grafana.exemstsc.world/d/windows-server-2019/windows-server-2019?var-alias=All)  |  [MikroTik Router](https://grafana.exemstsc.world/d/mikrotik-router/mikrotik-router?var-alias=rentall-mikrotik)  |  [Service Availability](https://grafana.exemstsc.world/d/service-availability/service-availability)\n\nRentall production: `192.168.112.20` MSSQL/Hyper-V/M.E.Doc, `192.168.112.19` RDP/1C, `192.168.112.1` MikroTik VM."
+        "content": "[Windows Server / Hyper-V](https://grafana.exemstsc.world/d/windows-server-2019/windows-server-2019?var-alias=All)  |  [MikroTik Router](https://grafana.exemstsc.world/d/mikrotik-router/mikrotik-router?var-alias=All)  |  [Service Availability](https://grafana.exemstsc.world/d/service-availability/service-availability)\n\nRentall production: `192.168.112.20` MSSQL/Hyper-V/M.E.Doc, `192.168.112.19` RDP/1C, `192.168.112.1` MikroTik VPN server, `192.168.1.1` office MikroTik."
       }
     },
     {
@@ -142,7 +142,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "up{job=\"mikrotik_snmp\",alias=\"rentall-mikrotik\"}",
+          "expr": "sum(up{job=\"mikrotik_snmp\",company=\"rentall\"})",
           "legendFormat": "__auto",
           "refId": "A",
           "instant": true,
@@ -163,8 +163,12 @@
                 "value": null
               },
               {
-                "color": "green",
+                "color": "orange",
                 "value": 1
+              },
+              {
+                "color": "green",
+                "value": 2
               }
             ]
           },
@@ -1109,8 +1113,8 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by (ifName) (rate(ifHCInOctets{job=\"mikrotik_snmp\",alias=\"rentall-mikrotik\"}[$__rate_interval])) * 8",
-          "legendFormat": "rx {{ifName}}",
+          "expr": "sum by (alias, ifName) (rate(ifHCInOctets{job=\"mikrotik_snmp\",company=\"rentall\"}[$__rate_interval])) * 8",
+          "legendFormat": "rx {{alias}} {{ifName}}",
           "refId": "A",
           "range": true
         },
@@ -1120,8 +1124,8 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum by (ifName) (rate(ifHCOutOctets{job=\"mikrotik_snmp\",alias=\"rentall-mikrotik\"}[$__rate_interval])) * 8",
-          "legendFormat": "tx {{ifName}}",
+          "expr": "sum by (alias, ifName) (rate(ifHCOutOctets{job=\"mikrotik_snmp\",company=\"rentall\"}[$__rate_interval])) * 8",
+          "legendFormat": "tx {{alias}} {{ifName}}",
           "refId": "B",
           "range": true
         }
@@ -1329,7 +1333,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "up{job=\"mikrotik_snmp\",alias=\"rentall-mikrotik\"}",
+          "expr": "up{job=\"mikrotik_snmp\",company=\"rentall\"}",
           "legendFormat": "__auto",
           "refId": "A",
           "instant": true,
