@@ -23,11 +23,13 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `monitoring/docker-compose.yml` - monitoring stack compose file used on `con`.
 - `scripts/cloud-backup-metrics.sh` - `cloud` backup health exporter for node_exporter textfile collection.
 - `scripts/cloud-run-daily-backups.sh` - corrected `cloud` daily backup wrapper for all non-ERP stacks.
-- `scripts/windows/` - Windows Server 2019 install and textfile metric scripts for services, Hyper-V VMs, and backups.
+- `scripts/windows/` - Windows install and textfile metric scripts for services, Hyper-V VMs, and backups.
 - `systemd/cloud-backup-metrics.*` - timer for the `cloud` backup health exporter.
 - `systemd/prometheus-test-tunnel.service` - persistent reverse SSH tunnel from `test` to `con`.
 - `systemd/rentall-vpn.service` - Rentall L2TP/IPsec VPN bootstrap service on `con`.
-- `docs/windows-2019-monitoring.md` - Windows Server 2019 / Hyper-V / MikroTik-behind-NAT monitoring runbook.
+- `docs/windows-monitoring-playbook.md` - generic playbook for adding Windows machines to monitoring.
+- `docs/windows-production-monitoring.md` - current production implementation for Rentall Windows, Hyper-V, RDP VM and MikroTik monitoring.
+- `docs/windows-2019-monitoring.md` - legacy combined Windows / Hyper-V / MikroTik runbook retained for compatibility.
 
 ## Runtime Notes
 
