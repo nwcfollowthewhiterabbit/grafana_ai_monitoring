@@ -1,13 +1,7 @@
-[]
-
-# Add Windows Server 2019 targets here after windows_exporter is installed.
-# This Rentall host is expected to be reachable from con through VPN:
-#   Host OS / Hyper-V / SQL / M.E.Doc / VM backups / VM RDP: 192.168.112.20
-# Example:
-# - targets:
-#     - 192.168.112.20:9182
-#   labels:
-#     alias: win2019
-#     company: rentall
-#     workspace: rentoll
-#     role: hyperv
+- targets:
+    - 192.168.112.20:9182
+  labels:
+    alias: rentall-hyperv
+    company: rentall
+    workspace: rentoll
+    role: hyperv

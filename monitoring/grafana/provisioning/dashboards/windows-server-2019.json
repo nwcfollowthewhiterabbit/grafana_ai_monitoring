@@ -937,7 +937,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Windows Server 2019",
+  "title": "Windows Server / Hyper-V",
   "uid": "windows-server-2019",
   "version": 1
 }

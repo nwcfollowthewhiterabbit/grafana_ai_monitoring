@@ -15,10 +15,17 @@ function Unix-Time([datetime]$Date) {
     return [int64]([DateTimeOffset]$Date).ToUnixTimeSeconds()
 }
 
+function Convert-JsonList([string]$Json) {
+    if (-not $Json) { return @() }
+    $value = ConvertFrom-Json $Json
+    if ($null -eq $value) { return @() }
+    return @($value | ForEach-Object { $_ })
+}
+
 $serviceNames = @()
 $backupPaths = @()
-if ($ServiceNamesJson) { $serviceNames = @(ConvertFrom-Json $ServiceNamesJson) }
-if ($BackupPathsJson) { $backupPaths = @(ConvertFrom-Json $BackupPathsJson) }
+if ($ServiceNamesJson) { $serviceNames = Convert-JsonList $ServiceNamesJson }
+if ($BackupPathsJson) { $backupPaths = Convert-JsonList $BackupPathsJson }
 
 $lines = New-Object System.Collections.Generic.List[string]
 $lines.Add("# HELP windows_custom_service_desired_running Whether a watched Windows service is running.")
@@ -33,7 +40,7 @@ foreach ($name in $serviceNames) {
         $state = [string]$svc.Status
         if ($svc.Status -eq "Running") { $value = 1 }
     }
-    $lines.Add(('windows_custom_service_desired_running{service="{0}",state="{1}"} {2}' -f (Escape-Label $name), (Escape-Label $state), $value))
+    $lines.Add(('windows_custom_service_desired_running{{service="{0}",state="{1}"}} {2}' -f (Escape-Label $name), (Escape-Label $state), $value))
 }
 
 $lines.Add("# HELP windows_custom_hyperv_vm_state Current VM state encoded as running=1, off=0, other=2.")
@@ -49,13 +56,13 @@ try {
             elseif ($vm.State -eq "Off") { $stateValue = 0 }
             $vmName = Escape-Label ([string]$vm.Name)
             $state = Escape-Label ([string]$vm.State)
-            $lines.Add(('windows_custom_hyperv_vm_state{vm="{0}",state="{1}"} {2}' -f $vmName, $state, $stateValue))
-            $lines.Add(('windows_custom_hyperv_vm_uptime_seconds{vm="{0}"} {1}' -f $vmName, [int64]$vm.Uptime.TotalSeconds))
+            $lines.Add(('windows_custom_hyperv_vm_state{{vm="{0}",state="{1}"}} {2}' -f $vmName, $state, $stateValue))
+            $lines.Add(('windows_custom_hyperv_vm_uptime_seconds{{vm="{0}"}} {1}' -f $vmName, [int64]$vm.Uptime.TotalSeconds))
         }
     }
 }
 catch {
-    $lines.Add(('windows_custom_hyperv_collection_error{error="{0}"} 1' -f (Escape-Label $_.Exception.Message)))
+    $lines.Add(('windows_custom_hyperv_collection_error{{error="{0}"}} 1' -f (Escape-Label $_.Exception.Message)))
 }
 
 $lines.Add("# HELP windows_custom_backup_path_latest_timestamp_seconds Latest file write timestamp under a watched backup path.")
@@ -67,31 +74,53 @@ foreach ($path in $backupPaths) {
     if (-not $path) { continue }
     $labelPath = Escape-Label $path
     try {
-        $latest = Get-ChildItem -Path $path -File -Recurse -ErrorAction Stop |
-            Sort-Object LastWriteTimeUtc -Descending |
-            Select-Object -First 1
+        $candidates = New-Object System.Collections.Generic.List[object]
+        Get-ChildItem -Path $path -File -ErrorAction Stop | ForEach-Object { $candidates.Add($_) }
+        Get-ChildItem -Path $path -Directory -ErrorAction SilentlyContinue | ForEach-Object {
+            Get-ChildItem -Path $_.FullName -File -ErrorAction SilentlyContinue | ForEach-Object { $candidates.Add($_) }
+        }
+        $latest = $candidates | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
         $timestamp = 0
         if ($latest) { $timestamp = Unix-Time $latest.LastWriteTimeUtc }
-        $lines.Add(('windows_custom_backup_path_available{path="{0}"} 1' -f $labelPath))
-        $lines.Add(('windows_custom_backup_path_latest_timestamp_seconds{path="{0}"} {1}' -f $labelPath, $timestamp))
+        $lines.Add(('windows_custom_backup_path_available{{path="{0}"}} 1' -f $labelPath))
+        $lines.Add(('windows_custom_backup_path_latest_timestamp_seconds{{path="{0}"}} {1}' -f $labelPath, $timestamp))
     }
     catch {
-        $lines.Add(('windows_custom_backup_path_available{path="{0}"} 0' -f $labelPath))
-        $lines.Add(('windows_custom_backup_path_latest_timestamp_seconds{path="{0}"} 0' -f $labelPath))
+        $lines.Add(('windows_custom_backup_path_available{{path="{0}"}} 0' -f $labelPath))
+        $lines.Add(('windows_custom_backup_path_latest_timestamp_seconds{{path="{0}"}} 0' -f $labelPath))
     }
 }
 
 $lines.Add("# HELP windows_custom_windows_backup_last_success_timestamp_seconds Latest successful Microsoft-Windows-Backup event timestamp.")
 $lines.Add("# TYPE windows_custom_windows_backup_last_success_timestamp_seconds gauge")
+$lines.Add("# HELP windows_custom_windows_backup_last_failure_timestamp_seconds Latest failed Microsoft-Windows-Backup event timestamp.")
+$lines.Add("# TYPE windows_custom_windows_backup_last_failure_timestamp_seconds gauge")
+$lines.Add("# HELP windows_custom_windows_backup_last_failure_event_id Latest failed Microsoft-Windows-Backup event ID.")
+$lines.Add("# TYPE windows_custom_windows_backup_last_failure_event_id gauge")
 $lastBackupSuccess = 0
+$lastBackupFailure = 0
+$lastBackupFailureId = 0
 try {
-    $event = Get-WinEvent -FilterHashtable @{ ProviderName = "Microsoft-Windows-Backup"; Id = 4 } -MaxEvents 1 -ErrorAction Stop
+    $event = Get-WinEvent -FilterHashtable @{ ProviderName = "Microsoft-Windows-Backup"; Id = 4, 14 } -MaxEvents 1 -ErrorAction Stop
     if ($event) { $lastBackupSuccess = Unix-Time $event.TimeCreated.ToUniversalTime() }
 }
 catch {
     $lastBackupSuccess = 0
 }
+try {
+    $event = Get-WinEvent -FilterHashtable @{ ProviderName = "Microsoft-Windows-Backup"; Id = 5, 8, 9, 17, 18, 19, 49, 50, 51, 52, 521 } -MaxEvents 1 -ErrorAction Stop
+    if ($event) {
+        $lastBackupFailure = Unix-Time $event.TimeCreated.ToUniversalTime()
+        $lastBackupFailureId = [int]$event.Id
+    }
+}
+catch {
+    $lastBackupFailure = 0
+    $lastBackupFailureId = 0
+}
 $lines.Add(('windows_custom_windows_backup_last_success_timestamp_seconds {0}' -f $lastBackupSuccess))
+$lines.Add(('windows_custom_windows_backup_last_failure_timestamp_seconds {0}' -f $lastBackupFailure))
+$lines.Add(('windows_custom_windows_backup_last_failure_event_id {0}' -f $lastBackupFailureId))
 
 $tmp = Join-Path $MetricsDir "windows_custom.prom.tmp"
 $out = Join-Path $MetricsDir "windows_custom.prom"

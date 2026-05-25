@@ -1,6 +1,6 @@
-# Windows Server 2019 Monitoring
+# Windows Server / Hyper-V Monitoring
 
-This runbook adds a Windows Server 2019 / Hyper-V host to the Grafana AI Monitoring stack.
+This runbook adds a Windows Server / Hyper-V host to the Grafana AI Monitoring stack. The current Rentall Hyper-V host at `192.168.112.20` reports itself as Windows Server 2025 Standard, hostname `ns3053862`.
 
 ## What Is Collected
 
@@ -8,7 +8,7 @@ This runbook adds a Windows Server 2019 / Hyper-V host to the Grafana AI Monitor
 - CPU, memory, logical disks, network, TCP, process, OS and system metrics from `windows_exporter`.
 - Specific Windows services through `windows_custom_service_desired_running`.
 - Hyper-V VM state and uptime through `windows_custom_hyperv_vm_state` and `windows_custom_hyperv_vm_uptime_seconds`.
-- Backup health through watched backup paths and Windows Server Backup success events.
+- Backup health through watched backup paths and Windows Server Backup success/failure events.
 
 ## Windows Install
 
@@ -60,7 +60,7 @@ Example:
 - targets:
     - 192.168.112.20:9182
   labels:
-    alias: win2019
+    alias: rentall-hyperv
     company: rentall
     workspace: rentoll
     role: hyperv
@@ -83,6 +83,13 @@ Provisioned Grafana rules:
 - `windows-hyperv-vm-not-running`: discovered Hyper-V VM not in `Running` state for 5 minutes.
 - `windows-backup-path-unavailable`: backup path cannot be listed for 30 minutes.
 - `windows-backup-stale`: watched backup path has no new files for 25 hours.
+
+Rentall host notes:
+
+- Hyper-V VMs currently discovered: `buh` and `mikrotik`.
+- Watched backup path: `D:\Backup`.
+- Important watched services include Hyper-V, SQL Server, SQL Browser, SQL Writer, Firebird/ZvitGrp, RDP services and Cloud Backup/Restore.
+- During initial inspection, the latest Windows Backup log contained VSS failure event `521` / `0x8100010C` on 2026-05-23, so backup-failure metrics are collected explicitly.
 
 If some VMs are normally powered off, filter them in `windows-custom-metrics.ps1` or pause the VM rule until the expected VM list is known.
 
@@ -121,7 +128,7 @@ Example:
     company: rentall
     workspace: rentoll
     role: router
-    parent_host: win2019
+    parent_host: rentall-hyperv
 ```
 
 Prometheus sends the `target` parameter to `snmp_exporter` on `con`:

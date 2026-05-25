@@ -5,4 +5,4 @@
     company: rentall
     workspace: rentoll
     role: router
-    parent_host: win2019
+    parent_host: rentall-hyperv

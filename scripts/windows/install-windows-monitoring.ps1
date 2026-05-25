@@ -19,8 +19,7 @@ if ($ExporterVersion -eq "latest") {
 }
 
 $workDir = "C:\ProgramData\grafana-ai-monitoring"
-$scriptDir = Join-Path $workDir "scripts"
-New-Item -ItemType Directory -Force -Path $workDir, $scriptDir, $MetricsDir | Out-Null
+New-Item -ItemType Directory -Force -Path $workDir, $MetricsDir | Out-Null
 
 $msiName = "windows_exporter-$ExporterVersion-amd64.msi"
 $msiUrl = "https://github.com/prometheus-community/windows_exporter/releases/download/v$ExporterVersion/$msiName"
@@ -29,7 +28,7 @@ $msiPath = Join-Path $workDir $msiName
 Write-Host "Downloading $msiUrl"
 Invoke-WebRequest -Uri $msiUrl -OutFile $msiPath -UseBasicParsing
 
-$collectors = "cpu,cs,logical_disk,memory,net,os,service,system,tcp,textfile,process,hyperv"
+$collectors = "cpu,memory,logical_disk,physical_disk,net,os,service,system,tcp,textfile,process,hyperv"
 $msiArgs = @(
     "/i", "`"$msiPath`"",
     "ENABLED_COLLECTORS=`"$collectors`"",
@@ -45,17 +44,27 @@ if ($process.ExitCode -ne 0) {
     throw "msiexec failed with exit code $($process.ExitCode)"
 }
 
-Copy-Item -Path (Join-Path $PSScriptRoot "windows-custom-metrics.ps1") -Destination (Join-Path $scriptDir "windows-custom-metrics.ps1") -Force
+$exporterExe = "C:\Program Files\windows_exporter\windows_exporter.exe"
+$binPath = '"{0}" --collectors.enabled="{1}" --collector.textfile.directories="{2}" --web.listen-address=":{3}"' -f $exporterExe, $collectors, $MetricsDir, $ListenPort
+$service = Get-CimInstance Win32_Service -Filter "Name='windows_exporter'"
+$change = Invoke-CimMethod -InputObject $service -MethodName Change -Arguments @{ PathName = $binPath }
+if ($change.ReturnValue -ne 0) {
+    throw "failed to configure windows_exporter service path, return value $($change.ReturnValue)"
+}
+
+Copy-Item -Path (Join-Path $PSScriptRoot "windows-custom-metrics.ps1") -Destination (Join-Path $workDir "windows-custom-metrics.ps1") -Force
 
 $servicesArg = $ServiceNames | ConvertTo-Json -Compress
 $backupPathsArg = $BackupPaths | ConvertTo-Json -Compress
-$actionArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptDir\windows-custom-metrics.ps1`" -MetricsDir `"$MetricsDir`" -ServiceNamesJson '$servicesArg' -BackupPathsJson '$backupPathsArg'"
+$actionArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$workDir\windows-custom-metrics.ps1`" -MetricsDir `"$MetricsDir`" -ServiceNamesJson '$servicesArg' -BackupPathsJson '$backupPathsArg'"
 
 $action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $actionArgs
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 1) -RepetitionDuration ([TimeSpan]::MaxValue)
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -RunLevel Highest
 Register-ScheduledTask -TaskName "Grafana Windows Custom Metrics" -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
 Start-ScheduledTask -TaskName "Grafana Windows Custom Metrics"
+
+Restart-Service windows_exporter -Force
 
 New-NetFirewallRule -DisplayName "windows_exporter metrics" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $ListenPort -ErrorAction SilentlyContinue | Out-Null
 
