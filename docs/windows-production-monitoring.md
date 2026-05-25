@@ -51,7 +51,12 @@ Observed host identity:
 
 - hostname: `ns3053862`;
 - OS: Windows Server 2025 Standard;
-- role: Hyper-V host, SQL server, M.E.Doc server, VM backup host, VM RDP host.
+- role: MSSQL Server, Hyper-V host and M.E.Doc server.
+
+Hosted VMs:
+
+- `192.168.112.19`: RDP server and 1C server;
+- `192.168.112.1`: MikroTik router.
 
 Collected metrics:
 
@@ -105,7 +110,7 @@ Observed host identity:
 
 - hostname: `WIN-7N65LE8EF7H`;
 - OS: Windows Server 2016 Standard Evaluation;
-- role: RDP VM.
+- role: RDP server and 1C server.
 
 Collected metrics:
 
@@ -123,6 +128,17 @@ Watched services:
 - `vmicvss`.
 
 No backup path is currently watched on this VM.
+
+## Planned Backup Work
+
+The current production monitoring watches existing backup signals where they are available, but the following backup automation still needs to be implemented:
+
+- configure automatic cloud backups for M.E.Doc data on `192.168.112.20`;
+- configure automatic cloud backups for 1C data on `192.168.112.19`;
+- expose M.E.Doc and 1C backup freshness, size, exit status and destination availability as Prometheus metrics;
+- configure VM-level backups on the Hyper-V host `192.168.112.20` for both VMs: `192.168.112.19` and `192.168.112.1`;
+- expose Hyper-V VM backup freshness, last result, backup size and storage free space as Prometheus metrics;
+- add Grafana panels and alerts after the backup jobs and metric files are stable.
 
 ## MikroTik Monitoring
 

@@ -16,6 +16,17 @@
 - Add backup verification metrics: last successful backup, backup size, restore-check age, and storage free space.
 - Add security/audit collection: SSH failures, sudo events, Docker restarts, pending updates, and exposed ports.
 
+## Rentall Backup Backlog
+
+- Configure automatic cloud backups for M.E.Doc on `192.168.112.20`.
+- Configure automatic cloud backups for 1C on `192.168.112.19`.
+- Add monitoring for M.E.Doc and 1C backup freshness, backup size, exit status, and cloud destination availability.
+- Configure Hyper-V VM backups on `192.168.112.20` for:
+  - RDP / 1C VM `192.168.112.19`;
+  - MikroTik VM `192.168.112.1`.
+- Add monitoring for Hyper-V VM backup freshness, last result, backup size, and backup storage free space.
+- Add Grafana panels and alert rules after backup jobs produce stable metrics.
+
 ## Alerting
 
 Grafana-managed alert rules exist for immediate infrastructure notifications:
