@@ -57,6 +57,7 @@ Hosted VMs:
 
 - `192.168.112.19`: RDP server and 1C server;
 - `192.168.112.1`: MikroTik router.
+- `192.168.1.1`: second MikroTik router reachable through `192.168.112.1`.
 
 Collected metrics:
 
@@ -142,12 +143,24 @@ The current production monitoring watches existing backup signals where they are
 
 ## MikroTik Monitoring
 
-MikroTik is a VM on the Hyper-V host.
+The primary MikroTik is a VM on the Hyper-V host.
 
 Address:
 
 ```text
 192.168.112.1
+```
+
+The second MikroTik is behind the primary router:
+
+```text
+192.168.1.1 via 192.168.112.1
+```
+
+`con` keeps a route for that remote subnet:
+
+```bash
+ip route replace 192.168.1.0/24 via 192.168.112.1 dev ppp0
 ```
 
 Prometheus does not poll RouterOS SNMP directly. It scrapes `snmp_exporter` on `con`, and `snmp_exporter` polls MikroTik through the VPN:
@@ -167,6 +180,14 @@ Current target:
     workspace: rentoll
     role: router
     parent_host: rentall-hyperv
+- targets:
+    - 192.168.1.1
+  labels:
+    alias: rentall-mikrotik-remote
+    company: rentall
+    workspace: rentoll
+    role: router
+    parent_host: rentall-mikrotik
 ```
 
 MikroTik SNMP is restricted to the VPN source address:
@@ -242,6 +263,7 @@ Check VPN on `con`:
 ```bash
 ip -br addr show ppp0
 ping -c 2 192.168.112.1
+ping -c 2 192.168.1.1
 ping -c 2 192.168.112.20
 ping -c 2 192.168.112.19
 ```

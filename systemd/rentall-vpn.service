@@ -9,7 +9,9 @@ RemainAfterExit=yes
 ExecStartPre=/bin/systemctl start strongswan-starter xl2tpd
 ExecStart=/usr/sbin/ipsec up rentall-l2tp
 ExecStartPost=/bin/sh -c 'echo "c rentall" > /var/run/xl2tpd/l2tp-control'
+ExecStartPost=/bin/sh -c 'for i in $(seq 1 20); do ip link show ppp0 >/dev/null 2>&1 && break; sleep 1; done; ip route replace 192.168.1.0/24 via 192.168.112.1 dev ppp0'
 ExecStop=/bin/sh -c 'echo "d rentall" > /var/run/xl2tpd/l2tp-control 2>/dev/null || true'
+ExecStopPost=/bin/sh -c 'ip route del 192.168.1.0/24 via 192.168.112.1 dev ppp0 2>/dev/null || true'
 ExecStopPost=/usr/sbin/ipsec down rentall-l2tp
 
 [Install]

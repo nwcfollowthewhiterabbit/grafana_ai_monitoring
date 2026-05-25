@@ -6,3 +6,11 @@
     workspace: rentoll
     role: router
     parent_host: rentall-hyperv
+- targets:
+    - 192.168.1.1
+  labels:
+    alias: rentall-mikrotik-remote
+    company: rentall
+    workspace: rentoll
+    role: router
+    parent_host: rentall-mikrotik
