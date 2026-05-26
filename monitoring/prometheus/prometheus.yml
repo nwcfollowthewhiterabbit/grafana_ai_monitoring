@@ -119,6 +119,14 @@ scrape_configs:
         - http_2xx
     static_configs:
       - targets:
+          - https://cloud.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: nextcloud-docker
+          service: app
+          criticality: high
+      - targets:
           - https://greenleafpacific.com
         labels:
           company: greenleaf
@@ -166,6 +174,46 @@ scrape_configs:
           stack: furniturecomfj
           service: app
           criticality: high
+      - targets:
+          - https://pacific.cleaning
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: pacificcleaning
+          service: app
+          criticality: high
+      - targets:
+          - https://fiji.pacific.cleaning
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: fijipacificcleaning
+          service: app
+          criticality: high
+      - targets:
+          - https://testing.erp.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: testingerpgreenleafpacificcom
+          service: frontend
+          criticality: medium
+      - targets:
+          - https://testing.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: testinggreenleafpacificcom
+          service: app
+          criticality: medium
+      - targets:
+          - https://testing2.greenleafpacific.com
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: testing2greenleafpacificcom
+          service: app
+          criticality: medium
       - targets:
           - https://bulataxi.com
         labels:

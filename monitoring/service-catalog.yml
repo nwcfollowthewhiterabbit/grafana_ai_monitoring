@@ -40,6 +40,12 @@ nodes:
 http_services:
   - company: greenleaf
     alias: cloud
+    stack: nextcloud-docker
+    service: app
+    url: https://cloud.greenleafpacific.com
+    criticality: high
+  - company: greenleaf
+    alias: cloud
     stack: greenleafpacificcom
     service: app
     url: https://greenleafpacific.com
@@ -76,6 +82,36 @@ http_services:
     criticality: high
   - company: greenleaf
     alias: cloud
+    stack: pacificcleaning
+    service: app
+    url: https://pacific.cleaning
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: fijipacificcleaning
+    service: app
+    url: https://fiji.pacific.cleaning
+    criticality: high
+  - company: greenleaf
+    alias: cloud
+    stack: testingerpgreenleafpacificcom
+    service: frontend
+    url: https://testing.erp.greenleafpacific.com
+    criticality: medium
+  - company: greenleaf
+    alias: cloud
+    stack: testinggreenleafpacificcom
+    service: app
+    url: https://testing.greenleafpacific.com
+    criticality: medium
+  - company: greenleaf
+    alias: cloud
+    stack: testing2greenleafpacificcom
+    service: app
+    url: https://testing2.greenleafpacific.com
+    criticality: medium
+  - company: greenleaf
+    alias: cloud
     stack: bulataxicom
     service: app
     url: https://bulataxi.com
@@ -86,8 +122,6 @@ pending_discovery:
     alias: cloud
     stacks:
       - beautylabspacomfj
-      - fijipacificcleaning
-      - pacificcleaning
       - trexfijicom
   - company: greenleaf
     alias: testing
