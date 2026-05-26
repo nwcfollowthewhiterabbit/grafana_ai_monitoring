@@ -6,11 +6,14 @@
 - Docker log collection to Loki with bounded labels: `company`, `alias`, `stack`, `service`, `container`.
 - HTTP availability and TLS probes through Blackbox Exporter for confirmed public service endpoints.
 - Service catalog as code in `monitoring/service-catalog.yml`.
+- Greenleaf `cloud` public Caddy endpoints are monitored as blackbox HTTP services.
 
 ## Next
 
 - Expand the service catalog with owners, repository links, backup policy, and runbook links.
 - Add confirmed URLs for internal/client services that are currently only visible as Docker stacks.
+- Keep Greenleaf public monitoring synchronized with `greenleaf_cloud-server:ops/public-sites.yml`.
+- Add explicit maintenance-window handling for planned Caddy/public-routing work.
 - Migrate node log collection from Promtail to Grafana Alloy after the current dashboards are stable.
 - Add OpenTelemetry/Tempo tracing for ERPNext, bots, APIs, and OpenClaw services.
 - Add backup verification metrics: last successful backup, backup size, restore-check age, and storage free space.
@@ -43,3 +46,9 @@ Pending notification delivery setup:
 - Service-specific ownership from `monitoring/service-catalog.yml`.
 - Runbook links in every notification.
 - Noise control with grouping, inhibition, and maintenance windows.
+
+## Greenleaf Public Endpoint Backlog
+
+- Keep `beautylab.spa.com.fj` and `trexfiji.com` out of public alerts until their DNS/certificate state is production-ready.
+- Track `bulataxi.com` as monitored but with DNS/certificate remediation owned by the production ops repo.
+- Add runbook links to public-site alert annotations after notification routing is configured.

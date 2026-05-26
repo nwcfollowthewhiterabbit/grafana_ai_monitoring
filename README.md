@@ -30,9 +30,18 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `docs/windows-monitoring-playbook.md` - generic playbook for adding Windows machines to monitoring.
 - `docs/windows-production-monitoring.md` - current production implementation for Rentall Windows, Hyper-V, RDP VM and MikroTik monitoring.
 - `docs/windows-2019-monitoring.md` - legacy combined Windows / Hyper-V / MikroTik runbook retained for compatibility.
+- `docs/greenleaf-public-monitoring.md` - Greenleaf public Caddy endpoint monitoring scope and apply procedure.
 
 ## Runtime Notes
 
+- Greenleaf `cloud` public endpoints are expected to be served by repo-managed
+  Caddy on the production server. Public HTTP checks in
+  `monitoring/prometheus/prometheus.yml` should match the active
+  `monitoring/service-catalog.yml` entries and the production source of truth
+  in `greenleaf_cloud-server:ops/public-sites.yml`.
+- Current Greenleaf `cloud` public blackbox scope is 13 HTTPS endpoints:
+  Nextcloud, main site, ERP, CGI, SG, SPA, Furniture, Pacific Cleaning,
+  Fiji Pacific Cleaning, Bulataxi, and the three testing storefront/ERP URLs.
 - `test` is behind NAT and is monitored through a reverse SSH tunnel:
   `test:127.0.0.1:9100 -> con:172.17.0.1:19100`.
 - `con` is monitored locally through compose services `node-exporter-con`
@@ -63,7 +72,7 @@ After changing Prometheus config:
 
 ```bash
 docker exec monitoring-prometheus promtool check config /etc/prometheus/prometheus.yml
-docker kill -s HUP monitoring-prometheus
+docker compose restart prometheus
 ```
 
 After changing alert rules or compose mounts:
