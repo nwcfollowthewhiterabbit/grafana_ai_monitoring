@@ -196,7 +196,7 @@ groups:
                     type: prometheus
                     uid: PBFA97CFB590B2093
                 editorMode: code
-                expr: 1 - probe_success{job="blackbox_http_services"}
+                expr: label_replace(label_replace(label_replace(scheduled_public_site_confirmed_down == 1, "company", "$1", "site_company", "(.*)"), "alias", "$1", "site_alias", "(.*)"), "instance", "$1", "site_instance", "(.*)")
                 instant: true
                 intervalMs: 1000
                 legendFormat: __auto
@@ -230,10 +230,10 @@ groups:
                 type: threshold
           noDataState: OK
           execErrState: Error
-          for: 5m
+          for: 1m
           annotations:
-            description: Blackbox HTTP probe failed. This includes DNS, TLS, TCP, timeout, redirect, or HTTP/server availability failures.
-            summary: Public site probe failed
+            description: Scheduled public site checker confirmed at least 3 failed checks in one cycle. The checker runs every 3 hours, queues targets with bounded concurrency, and retries initially failed targets 3 times with 5 minutes between retry rounds.
+            summary: Public site confirmed down
           labels:
             category: availability
             managed_by: codex

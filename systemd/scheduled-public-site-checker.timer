@@ -1,0 +1,11 @@
+[Unit]
+Description=Run queued scheduled public site checker every 3 hours
+
+[Timer]
+OnCalendar=*-*-* 00/3:00:00
+AccuracySec=1m
+Persistent=true
+Unit=scheduled-public-site-checker.service
+
+[Install]
+WantedBy=timers.target

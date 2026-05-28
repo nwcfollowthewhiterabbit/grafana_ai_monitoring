@@ -23,6 +23,7 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `monitoring/docker-compose.yml` - monitoring stack compose file used on `con`.
 - `scripts/cloud-backup-metrics.sh` - `cloud` backup health exporter for node_exporter textfile collection.
 - `scripts/cloud-run-daily-backups.sh` - corrected `cloud` daily backup wrapper for all non-ERP stacks.
+- `scripts/scheduled-public-site-checker.py` - queued public HTTP checker for large endpoint lists and confirmed-down alerting.
 - `scripts/windows/` - Windows install and textfile metric scripts for services, Hyper-V VMs, and backups.
 - `systemd/cloud-backup-metrics.*` - timer for the `cloud` backup health exporter.
 - `systemd/prometheus-test-tunnel.service` - persistent reverse SSH tunnel from `test` to `con`.
@@ -42,6 +43,10 @@ Prometheus and Grafana provisioning for client server monitoring.
 - Current Greenleaf `cloud` public blackbox scope is 13 HTTPS endpoints:
   Nextcloud, main site, ERP, CGI, SG, SPA, Furniture, Pacific Cleaning,
   Fiji Pacific Cleaning, Bulataxi, and the three testing storefront/ERP URLs.
+- Public site notifications use the queued scheduled checker, not raw blackbox
+  probe flaps. The checker runs every 3 hours, limits concurrency, retries
+  initially failed URLs 3 more times 5 minutes apart, and alerts only after at
+  least 3 failed attempts in that cycle.
 - `test` is behind NAT and is monitored through a reverse SSH tunnel:
   `test:127.0.0.1:9100 -> con:172.17.0.1:19100`.
 - `con` is monitored locally through compose services `node-exporter-con`
@@ -79,6 +84,14 @@ After changing alert rules or compose mounts:
 
 ```bash
 docker compose up -d prometheus
+```
+
+After changing the scheduled public site checker:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart scheduled-public-site-checker.service
+sudo systemctl enable --now scheduled-public-site-checker.timer
 ```
 
 After changing dashboard provisioning:

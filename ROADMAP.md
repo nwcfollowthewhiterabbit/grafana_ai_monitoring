@@ -4,7 +4,8 @@
 
 - Service stack resource dashboards by company, node, stack, and service.
 - Docker log collection to Loki with bounded labels: `company`, `alias`, `stack`, `service`, `container`.
-- HTTP availability and TLS probes through Blackbox Exporter for confirmed public service endpoints.
+- HTTP availability and TLS probes through Blackbox Exporter for diagnostics.
+- Queued scheduled public checks for notification-grade public-site availability.
 - Service catalog as code in `monitoring/service-catalog.yml`.
 - Greenleaf `cloud` public Caddy endpoints are monitored as blackbox HTTP services.
 
@@ -37,7 +38,9 @@ Grafana-managed alert rules exist for immediate infrastructure notifications:
 - `cloud-s3-mount-down`: `/greenleafbackup` unhealthy for more than 30 minutes.
 - `cloud-erp-backup-stale`: ERP backup older than 7 hours.
 - `cloud-daily-stack-backup-stale`: non-ERP stack backup missing or older than 25 hours.
-- `public-site-down`: any public blackbox HTTP probe fails for more than 5 minutes.
+- `public-site-down`: scheduled public checker confirms at least 3 failed checks
+  in one cycle. The checker runs every 3 hours and retries initially failed URLs
+  3 more times with 5 minutes between retry rounds.
 
 Pending notification delivery setup:
 
