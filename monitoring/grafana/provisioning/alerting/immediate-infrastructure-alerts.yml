@@ -230,7 +230,7 @@ groups:
                 type: threshold
           noDataState: OK
           execErrState: Error
-          for: 1m
+          for: 5m
           annotations:
             description: Blackbox HTTP probe failed. This includes DNS, TLS, TCP, timeout, redirect, or HTTP/server availability failures.
             summary: Public site probe failed

@@ -51,3 +51,13 @@ curl -sS 'http://127.0.0.1:9090/api/v1/query?query=probe_success%7Bjob%3D%22blac
 ```
 
 Expected current count: `13` targets with value `1`.
+
+## Flapping Policy
+
+`public-site-down` requires 5 minutes of failed public HTTP probes before paging.
+Shorter one-off failures should be investigated through Prometheus history, but
+should not page by default.
+
+For Cloudflare-proxied or policy-drifted domains, a public probe only proves the
+edge path. If an incident suggests origin slowness, verify the direct origin from
+`cloud` and compare Caddy logs with blackbox probe timing.

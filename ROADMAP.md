@@ -37,7 +37,7 @@ Grafana-managed alert rules exist for immediate infrastructure notifications:
 - `cloud-s3-mount-down`: `/greenleafbackup` unhealthy for more than 30 minutes.
 - `cloud-erp-backup-stale`: ERP backup older than 7 hours.
 - `cloud-daily-stack-backup-stale`: non-ERP stack backup missing or older than 25 hours.
-- `public-site-down`: any public blackbox HTTP probe fails for more than 1 minute.
+- `public-site-down`: any public blackbox HTTP probe fails for more than 5 minutes.
 
 Pending notification delivery setup:
 
@@ -46,6 +46,8 @@ Pending notification delivery setup:
 - Service-specific ownership from `monitoring/service-catalog.yml`.
 - Runbook links in every notification.
 - Noise control with grouping, inhibition, and maintenance windows.
+- Split public checks into edge-path and direct-origin probes where DNS or
+  Cloudflare policy can hide origin behavior.
 
 ## Greenleaf Public Endpoint Backlog
 
