@@ -44,6 +44,20 @@ services:
       - cadvisor-con
       - snmp-exporter
 
+  prom-label-proxy-greenleaf:
+    image: quay.io/prometheuscommunity/prom-label-proxy:v0.13.0
+    container_name: monitoring-prom-label-proxy-greenleaf
+    restart: unless-stopped
+    command:
+      - -label=company
+      - -label-value=greenleaf
+      - -upstream=http://prometheus:9090
+      - -insecure-listen-address=0.0.0.0:8080
+      - -enable-label-apis
+      - -error-on-replace
+    depends_on:
+      - prometheus
+
   node-exporter-con:
     image: prom/node-exporter:v1.9.1
     container_name: monitoring-node-exporter

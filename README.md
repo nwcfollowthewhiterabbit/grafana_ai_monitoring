@@ -32,6 +32,7 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `docs/windows-production-monitoring.md` - current production implementation for Rentall Windows, Hyper-V, RDP VM and MikroTik monitoring.
 - `docs/windows-2019-monitoring.md` - legacy combined Windows / Hyper-V / MikroTik runbook retained for compatibility.
 - `docs/greenleaf-public-monitoring.md` - Greenleaf public Caddy endpoint monitoring scope and apply procedure.
+- `docs/company-grafana-access.md` - read-only company-scoped Grafana access model.
 
 ## Runtime Notes
 

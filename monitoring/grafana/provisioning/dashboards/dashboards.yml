@@ -10,3 +10,12 @@ providers:
     allowUiUpdates: true
     options:
       path: /etc/grafana/provisioning/dashboards
+  - name: Greenleaf customer monitoring
+    orgId: 2
+    folder: Greenleaf
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: false
+    options:
+      path: /etc/grafana/provisioning/company-dashboards/greenleaf
