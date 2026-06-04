@@ -19,7 +19,7 @@ scrape_configs:
           alias: con
           company: my own
       - targets:
-          - cloud.greenleafpacific.com:9100
+          - 139.99.155.118:9100
         labels:
           alias: cloud
           company: greenleaf
@@ -57,7 +57,7 @@ scrape_configs:
           alias: con
           company: my own
       - targets:
-          - cloud.greenleafpacific.com:18082
+          - 139.99.155.118:18082
         labels:
           alias: cloud
           company: greenleaf

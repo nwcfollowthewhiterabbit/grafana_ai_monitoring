@@ -89,7 +89,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "greenleaf_backup_mount_healthy{alias=\"cloud\"}",
+          "expr": "greenleaf_backup_mount_healthy{company=\"greenleaf\",alias=\"cloud\"}",
           "refId": "A"
         }
       ],
@@ -164,7 +164,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "greenleaf_backup_cron_present{alias=\"cloud\"}",
+          "expr": "min(greenleaf_backup_timer_enabled{company=\"greenleaf\",alias=\"cloud\"})",
           "refId": "A"
         }
       ],
@@ -239,7 +239,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "greenleaf_backup_restic_scheduled{alias=\"cloud\"}",
+          "expr": "max(greenleaf_backup_timer_enabled{company=\"greenleaf\",alias=\"cloud\"})",
           "refId": "A"
         }
       ],
@@ -305,7 +305,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "time() - greenleaf_backup_stack_latest_timestamp_seconds{alias=\"cloud\",stack=\"erp.greenleafpacific.com\"}",
+          "expr": "time() - greenleaf_backup_stack_remote_latest_timestamp_seconds{company=\"greenleaf\",alias=\"cloud\",stack=\"erp.greenleafpacific.com\"}",
           "refId": "A"
         }
       ],
@@ -367,7 +367,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "greenleaf_backup_stack_backup_count{alias=\"cloud\"}",
+          "expr": "greenleaf_backup_stack_configured{company=\"greenleaf\",alias=\"cloud\"}",
           "format": "table",
           "instant": true,
           "refId": "A"
@@ -377,7 +377,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "time() - greenleaf_backup_stack_latest_timestamp_seconds{alias=\"cloud\"}",
+          "expr": "time() - greenleaf_backup_stack_remote_latest_timestamp_seconds{company=\"greenleaf\",alias=\"cloud\"}",
           "format": "table",
           "instant": true,
           "refId": "B"
@@ -387,7 +387,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "greenleaf_backup_stack_latest_archive_bytes{alias=\"cloud\"}",
+          "expr": "greenleaf_backup_stack_remote_archive_bytes{company=\"greenleaf\",alias=\"cloud\"}",
           "format": "table",
           "instant": true,
           "refId": "C"
@@ -397,7 +397,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "greenleaf_backup_stack_latest_volume_archives{alias=\"cloud\"}",
+          "expr": "greenleaf_backup_stack_remote_manifest_present{company=\"greenleaf\",alias=\"cloud\"}",
           "format": "table",
           "instant": true,
           "refId": "D"
@@ -497,7 +497,7 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "time() - greenleaf_backup_stack_latest_timestamp_seconds{alias=\"cloud\"}",
+          "expr": "time() - greenleaf_backup_stack_remote_latest_timestamp_seconds{company=\"greenleaf\",alias=\"cloud\"}",
           "legendFormat": "{{stack}}",
           "refId": "A"
         }

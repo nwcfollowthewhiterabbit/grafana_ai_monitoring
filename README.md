@@ -41,6 +41,9 @@ Prometheus and Grafana provisioning for client server monitoring.
   `monitoring/prometheus/prometheus.yml` should match the active
   `monitoring/service-catalog.yml` entries and the production source of truth
   in `greenleaf_cloud-server:ops/public-sites.yml`.
+- Greenleaf `cloud` exporters are scraped by direct origin IP
+  `139.99.155.118`, not by `cloud.greenleafpacific.com`, because that hostname
+  is a public website route and may be Cloudflare/proxy managed.
 - Current Greenleaf `cloud` public blackbox scope is 13 HTTPS endpoints:
   Nextcloud, main site, ERP, CGI, SG, SPA, Furniture, Pacific Cleaning,
   Fiji Pacific Cleaning, Bulataxi, and the three testing storefront/ERP URLs.
