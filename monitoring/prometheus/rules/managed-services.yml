@@ -1,0 +1,440 @@
+groups:
+  - name: monitoring_pipeline
+    interval: 30s
+    rules:
+      - alert: PrometheusConfigReloadFailed
+        expr: prometheus_config_last_reload_successful == 0
+        for: 2m
+        keep_firing_for: 2m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: prometheus
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Prometheus rejected its configuration"
+          description: "The last Prometheus configuration reload failed. The previous configuration is still active."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#monitoring-pipeline"
+
+      - alert: AlertmanagerNotDiscovered
+        expr: prometheus_notifications_alertmanagers_discovered < 1
+        for: 2m
+        keep_firing_for: 2m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: alertmanager
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Prometheus cannot discover Alertmanager"
+          description: "Alerts are being evaluated but cannot enter the notification pipeline."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#monitoring-pipeline"
+
+      - alert: AlertmanagerDown
+        expr: up{job="alertmanager"} == 0
+        for: 2m
+        keep_firing_for: 2m
+        labels:
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Alertmanager is not scrapeable"
+          description: "Prometheus cannot scrape the central Alertmanager on con."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#monitoring-pipeline"
+
+      - alert: IncidentGatewayDown
+        expr: up{job="incident_gateway"} == 0
+        for: 2m
+        keep_firing_for: 2m
+        labels:
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Incident gateway is not scrapeable"
+          description: "The durable Telegram delivery gateway is unavailable. Alertmanager will retry its webhook."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#monitoring-pipeline"
+
+      - alert: ScheduledSiteCheckerMissing
+        expr: absent(scheduled_public_site_cycle_last_finish_timestamp_seconds)
+        for: 10m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: scheduled-site-checker
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Scheduled public-site checker metrics are missing"
+          description: "The notification-grade site checker has never produced a visible metric."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: ScheduledSiteCheckerStale
+        expr: time() - scheduled_public_site_cycle_last_finish_timestamp_seconds > 16200
+        for: 5m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: scheduled-site-checker
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Scheduled public-site checker is stale"
+          description: "No completed public-site check cycle has been recorded for more than 4.5 hours."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: ScheduledSiteCheckerFailed
+        expr: scheduled_public_site_checker_up == 0 or scheduled_public_site_catalog_valid == 0
+        for: 5m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: scheduled-site-checker
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Scheduled public-site checker failed"
+          description: "The last availability cycle failed or rejected the service catalog."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: SiteIntegrityCheckerMissing
+        expr: absent(site_integrity_cycle_last_attempt_timestamp_seconds)
+        for: 15m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: site-integrity-checker
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Site-integrity checker metrics are missing"
+          description: "The twice-daily integrity checker has never produced a visible self metric."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: SiteIntegrityCheckerFailed
+        expr: site_integrity_checker_up == 0 or site_integrity_catalog_valid == 0
+        for: 5m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: site-integrity-checker
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Site-integrity checker failed"
+          description: "The last integrity cycle failed or rejected the service catalog."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: SiteIntegrityCheckerStale
+        expr: time() - site_integrity_cycle_last_success_timestamp_seconds > 90000
+        for: 15m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: site-integrity-checker
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Site-integrity checker is stale"
+          description: "No successful integrity cycle has been recorded for more than 25 hours."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: ServiceEventMetricsFailed
+        expr: service_event_metrics_up == 0 or service_event_catalog_valid == 0
+        for: 5m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: service-event-metrics
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Service-event deadline metrics failed"
+          description: "The last deadline render failed or rejected the service catalog."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: ServiceEventMetricsMissing
+        expr: absent(service_event_metrics_last_attempt_timestamp_seconds)
+        for: 15m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: service-event-metrics
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Service-event deadline metrics are missing"
+          description: "The daily service-event metrics job has never produced a visible self metric."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: ServiceEventMetricsStale
+        expr: time() - service_event_metrics_last_success_timestamp_seconds > 129600
+        for: 15m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: service-event-metrics
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Service-event deadline metrics are stale"
+          description: "No successful deadline render has been recorded for more than 36 hours."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: ServiceEventCatalogEntryInvalid
+        expr: service_event_error_count > 0
+        for: 5m
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: service-event-metrics
+          category: lifecycle
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "One or more service-event deadlines cannot be evaluated"
+          description: "Review active catalog entries with unknown or invalid due dates."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#tls-or-service-event-expiry"
+
+  - name: public_service_availability
+    interval: 30s
+    rules:
+      - alert: PublicSiteDown
+        expr: |
+          max_over_time(
+            probe_success{job="blackbox_http_services",criticality=~"critical|high"}[10m]
+          ) == 0
+        for: 2m
+        keep_firing_for: 5m
+        labels:
+          category: availability
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Public site has had no successful probe for 10 minutes: {{ $labels.instance }}"
+          description: "Frequent external probes have failed continuously. The scheduled checker remains independent supporting evidence."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#public-site-down"
+
+      - alert: PublicSiteDownNonProduction
+        expr: |
+          max_over_time(
+            probe_success{job="blackbox_http_services",criticality="medium"}[15m]
+          ) == 0
+        for: 2m
+        keep_firing_for: 5m
+        labels:
+          category: availability
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Non-production site has had no successful probe for 15 minutes: {{ $labels.instance }}"
+          description: "Frequent external probes to a medium-criticality endpoint have failed continuously."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#public-site-down"
+
+      - alert: BlackboxProbePipelineDown
+        expr: up{job="blackbox_http_services"} == 0
+        for: 2m
+        keep_firing_for: 2m
+        labels:
+          category: monitoring
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Blackbox probe pipeline failed for {{ $labels.instance }}"
+          description: "Prometheus could not execute the external probe at all; this is different from a probe that ran and found the site down."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+      - alert: TLSCertificateExpiring
+        expr: |
+          (probe_ssl_earliest_cert_expiry{job="blackbox_http_services"} - time() < 2592000)
+          and
+          (probe_ssl_earliest_cert_expiry{job="blackbox_http_services"} - time() >= 1209600)
+        for: 30m
+        labels:
+          category: lifecycle
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "TLS certificate expires within 30 days: {{ $labels.instance }}"
+          description: "Renew or verify automatic certificate renewal before the critical window."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#tls-or-service-event-expiry"
+
+      - alert: TLSCertificateExpiryCritical
+        expr: probe_ssl_earliest_cert_expiry{job="blackbox_http_services"} - time() < 1209600
+        for: 15m
+        labels:
+          category: lifecycle
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "TLS certificate expires within 14 days: {{ $labels.instance }}"
+          description: "Certificate renewal requires immediate attention. A failed TLS probe is covered separately by PublicSiteDown."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#tls-or-service-event-expiry"
+
+      - alert: SiteIntegrityProblem
+        expr: |
+          label_replace(
+            label_replace(
+              label_replace(site_integrity_confirmed_problem == 1, "company", "$1", "site_company", "(.*)"),
+              "alias", "$1", "site_alias", "(.*)"
+            ),
+            "instance", "$1", "site_instance", "(.*)"
+          )
+        for: 5m
+        keep_firing_for: 30m
+        labels:
+          category: integrity
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Public page integrity problem: {{ $labels.site_instance }}"
+          description: "Two consecutive integrity cycles found an empty/error page or a high failed-resource ratio. Content changes are not compared with a baseline."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
+
+  - name: service_lifecycle
+    interval: 1m
+    rules:
+      - alert: ServiceEventDueSoon
+        expr: |
+          label_replace(
+            label_replace(
+              service_event_days_remaining <= 30 and service_event_days_remaining > 7,
+              "company", "$1", "event_company", "(.*)"
+            ),
+            "alias", "$1", "event_alias", "(.*)"
+          )
+        for: 5m
+        labels:
+          category: lifecycle
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Service event due in {{ $value | printf \"%.0f\" }} days: {{ $labels.event_title }}"
+          description: "Review the owner and renewal action recorded in the service catalog."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#tls-or-service-event-expiry"
+
+      - alert: ServiceEventDueCritical
+        expr: |
+          label_replace(
+            label_replace(
+              service_event_days_remaining <= 7,
+              "company", "$1", "event_company", "(.*)"
+            ),
+            "alias", "$1", "event_alias", "(.*)"
+          )
+        for: 5m
+        labels:
+          category: lifecycle
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Service event due or overdue: {{ $labels.event_title }}"
+          description: "The recorded due date is within seven days or has already passed."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#tls-or-service-event-expiry"
+
+  - name: backup_health
+    interval: 1m
+    rules:
+      - alert: CloudBackupMountUnhealthy
+        expr: |
+          (max by (company, alias) (greenleaf_backup_mount_healthy{alias="cloud",path="/greenleafbackup"}) == 0)
+          or
+          absent(greenleaf_backup_mount_healthy{alias="cloud",path="/greenleafbackup"})
+        for: 30m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: backups
+          service: object-storage-mount
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "cloud: backup object-storage mount is unhealthy"
+          description: "The mount is unhealthy or its metric disappeared for more than 30 minutes."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#backup-stale-or-unavailable"
+
+      - alert: CloudERPBackupStale
+        expr: |
+          (time() - max by (company, alias, stack) (greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack="erp.greenleafpacific.com"}) > 25200)
+          or
+          (max by (company, alias, stack) (greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack="erp.greenleafpacific.com"}) == 0)
+          or
+          absent(greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack="erp.greenleafpacific.com"})
+        for: 5m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: erpgreenleafpacificcom
+          service: backup
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "cloud: ERP backup is older than seven hours"
+          description: "The expected six-hour ERP backup did not refresh within its grace period, or its metric disappeared."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#backup-stale-or-unavailable"
+
+      - alert: CloudDailyStackBackupStale
+        expr: |
+          (time() - greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack!="erp.greenleafpacific.com"} > 90000)
+          or
+          (greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud",stack!="erp.greenleafpacific.com"} == 0)
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          service: backup
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "cloud: daily application backup is older than 25 hours"
+          description: "A non-ERP application backup did not refresh after the daily schedule and grace period."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#backup-stale-or-unavailable"
+
+      - alert: CloudBackupMetricsMissing
+        expr: absent(greenleaf_backup_stack_latest_timestamp_seconds{alias="cloud"})
+        for: 30m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: backups
+          service: backup-metrics
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "cloud: all per-stack backup metrics are missing"
+          description: "The backup exporter is not exposing any per-stack latest timestamp; absence is not interpreted as healthy."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#backup-stale-or-unavailable"

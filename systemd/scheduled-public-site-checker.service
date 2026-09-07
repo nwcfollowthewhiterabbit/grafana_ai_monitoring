@@ -1,12 +1,25 @@
 [Unit]
 Description=Queued scheduled public site checker
 Wants=network-online.target
-After=network-online.target docker.service
+After=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/python3 /root/monitoring/scripts/scheduled-public-site-checker.py --catalog /root/monitoring/service-catalog.yml --output /var/lib/node-exporter-textfile/scheduled-public-sites.prom --lock /run/scheduled-public-site-checker/lock --timeout 12 --max-workers 16 --queue-buckets 180 --retry-count 3 --retry-interval 300 --failure-threshold 3
+WorkingDirectory=/opt/rabbit-monitoring-v2
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/rabbit-monitoring-v2/scripts/scheduled-public-site-checker.py --catalog /opt/rabbit-monitoring-v2/monitoring/service-catalog.yml --output /var/lib/node-exporter-textfile/scheduled-public-sites.prom --self-output /var/lib/node-exporter-textfile/scheduled-public-site-checker-self.prom --state /var/lib/rabbit-monitoring-v2/checkers/scheduled-public-sites-state.json --lock /run/scheduled-public-site-checker/lock --timeout 12 --max-workers 16 --queue-buckets 180 --retry-count 3 --retry-interval 300 --failure-threshold 3
+RuntimeDirectory=scheduled-public-site-checker
+StateDirectory=rabbit-monitoring-v2/checkers
+TimeoutStartSec=25m
 Nice=10
 IOSchedulingClass=best-effort
 IOSchedulingPriority=7
-
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/node-exporter-textfile /var/lib/rabbit-monitoring-v2/checkers /run/scheduled-public-site-checker
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

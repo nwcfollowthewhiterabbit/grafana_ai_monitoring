@@ -2,6 +2,16 @@
 
 Prometheus and Grafana provisioning for client server monitoring.
 
+## Managed Monitoring v2
+
+The repository now contains a deployable v2 foundation: hierarchical inventory and generated targets, operational admin/customer dashboards, Prometheus and Alertmanager rules, a stateful SQLite incident gateway, and an isolated shadow Compose deployment. The gateway is outbound-only to Telegram, persists incident transitions before responding, and enforces DOWN then Recovery ordering.
+
+This repository state is ready for validation and shadow operation; it does not by itself mean production notifications have been cut over. Until the rollout gates are completed, the legacy monitoring/OpenClaw route remains authoritative. See:
+
+- `docs/managed-monitoring-v2-architecture.md` for the model, guarantees, audited baseline and boundaries;
+- `docs/managed-monitoring-v2-runbook.md` for validation, shadow deployment, canary, cutover and rollback;
+- `services/incident-gateway/README.md` for the implemented gateway contract.
+
 ## Current Segments
 
 | Company | Nodes |
@@ -33,6 +43,9 @@ Prometheus and Grafana provisioning for client server monitoring.
 - `docs/windows-2019-monitoring.md` - legacy combined Windows / Hyper-V / MikroTik runbook retained for compatibility.
 - `docs/greenleaf-public-monitoring.md` - Greenleaf public Caddy endpoint monitoring scope and apply procedure.
 - `docs/company-grafana-access.md` - read-only company-scoped Grafana access model.
+- `docs/managed-monitoring-v2-architecture.md` - v2 architecture, incident lifecycle, isolation and deployment boundaries.
+- `docs/managed-monitoring-v2-runbook.md` - staged validation, shadow, canary, cutover and rollback procedure.
+- `services/incident-gateway/` - SQLite-backed Alertmanager-to-Telegram incident gateway.
 
 ## Runtime Notes
 
@@ -47,8 +60,10 @@ Prometheus and Grafana provisioning for client server monitoring.
 - Current Greenleaf `cloud` public blackbox scope is 13 HTTPS endpoints:
   Nextcloud, main site, ERP, CGI, SG, SPA, Furniture, Pacific Cleaning,
   Fiji Pacific Cleaning, Bulataxi, and the three testing storefront/ERP URLs.
-- Public site notifications use the queued scheduled checker, not raw blackbox
-  probe flaps. The checker runs every 3 hours, limits concurrency, retries
+- The legacy production Grafana route uses the queued scheduled checker, not raw
+  Blackbox probe flaps. Managed Monitoring v2 also evaluates a sustained
+  high-frequency Blackbox window in shadow so the two signals can be compared
+  before notification cutover. The queued checker runs every 3 hours, limits concurrency, retries
   initially failed URLs 3 more times 5 minutes apart, and alerts only after at
   least 3 failed attempts in that cycle.
 - `test` is behind NAT and is monitored through a reverse SSH tunnel:

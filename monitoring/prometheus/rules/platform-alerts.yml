@@ -1,0 +1,103 @@
+groups:
+  - name: windows_platform
+    interval: 1m
+    rules:
+      - alert: WindowsExporterDown
+        expr: up{job="windows_exporter_clients"} == 0
+        for: 5m
+        keep_firing_for: 2m
+        labels:
+          category: windows
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Windows monitoring is unreachable on {{ $labels.alias }}"
+          description: "Prometheus cannot scrape windows_exporter. Service, VM and backup metrics from this server are unavailable."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#node-or-exporter-down"
+
+      - alert: WindowsWatchedServiceDown
+        expr: windows_custom_service_desired_running{job="windows_exporter_clients"} == 0
+        for: 2m
+        keep_firing_for: 2m
+        labels:
+          category: windows
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Required Windows service is down on {{ $labels.alias }}"
+          description: "A service from the explicit watched-service list is stopped or missing."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/windows-monitoring-playbook.md"
+
+      - alert: WindowsHyperVVMNotRunning
+        expr: windows_custom_hyperv_vm_state{job="windows_exporter_clients"} != 1
+        for: 5m
+        keep_firing_for: 2m
+        labels:
+          category: windows
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Expected Hyper-V VM is not running on {{ $labels.alias }}"
+          description: "An explicitly monitored Hyper-V VM is not in Running state."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/windows-production-monitoring.md"
+
+      - alert: WindowsBackupPathUnavailable
+        expr: windows_custom_backup_path_available{job="windows_exporter_clients"} == 0
+        for: 30m
+        keep_firing_for: 5m
+        labels:
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Windows backup path is unavailable on {{ $labels.alias }}"
+          description: "A configured backup path cannot be listed for more than 30 minutes."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#backup-stale-or-unavailable"
+
+      - alert: WindowsBackupStale
+        expr: |
+          (time() - windows_custom_backup_path_latest_timestamp_seconds{job="windows_exporter_clients"} > 90000)
+          or
+          (windows_custom_backup_path_latest_timestamp_seconds{job="windows_exporter_clients"} == 0)
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Windows backup is older than 25 hours on {{ $labels.alias }}"
+          description: "A watched backup path has no new backup artifact after the daily schedule and grace period."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#backup-stale-or-unavailable"
+
+  - name: mikrotik_platform
+    interval: 1m
+    rules:
+      - alert: MikroTikSNMPDown
+        expr: up{job="mikrotik_snmp"} == 0
+        for: 5m
+        keep_firing_for: 2m
+        labels:
+          category: mikrotik
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "MikroTik SNMP monitoring is unavailable for {{ $labels.alias }}"
+          description: "Prometheus cannot scrape the router through the configured VPN/SNMP path."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/windows-production-monitoring.md"
+
+      - alert: MikroTikManagedInterfaceDown
+        expr: |
+          (ifOperStatus{job="mikrotik_snmp"} != 1)
+          and on (instance, ifIndex)
+          (ifAdminStatus{job="mikrotik_snmp"} == 1)
+        for: 5m
+        keep_firing_for: 2m
+        labels:
+          category: mikrotik
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Administratively enabled MikroTik interface is down"
+          description: "The interface is configured up but its operational state is not up. Administratively disabled ports are excluded."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/windows-production-monitoring.md"

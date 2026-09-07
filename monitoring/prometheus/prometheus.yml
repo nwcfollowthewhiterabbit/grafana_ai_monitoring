@@ -2,6 +2,12 @@ global:
   scrape_interval: 15s
   evaluation_interval: 15s
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
 rule_files:
   - /etc/prometheus/rules/*.yml
 
@@ -10,6 +16,28 @@ scrape_configs:
     static_configs:
       - targets:
           - localhost:9090
+
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+          - alertmanager:9093
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: alertmanager
+
+  - job_name: incident_gateway
+    metrics_path: /metrics
+    honor_labels: true
+    static_configs:
+      - targets:
+          - incident-gateway:8080
+        labels:
+          company: my own
+          alias: con
+          stack: monitoring
+          service: incident-gateway
 
   - job_name: node_exporter_clients
     static_configs:
@@ -33,6 +61,7 @@ scrape_configs:
         labels:
           alias: new
           company: greenleaf
+          monitoring_status: pending_access
       - targets:
           - 172.17.0.1:19100
         labels:
@@ -117,111 +146,10 @@ scrape_configs:
     params:
       module:
         - http_2xx
-    static_configs:
-      - targets:
-          - https://cloud.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: nextcloud-docker
-          service: app
-          criticality: high
-      - targets:
-          - https://greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: greenleafpacificcom
-          service: app
-          criticality: high
-      - targets:
-          - https://erp.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: erpgreenleafpacificcom
-          service: frontend
-          criticality: critical
-      - targets:
-          - https://cgi.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: cgigreenleafpacificcom
-          service: app
-          criticality: high
-      - targets:
-          - https://sg.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: sggreenleafpacificcom
-          service: app
-          criticality: high
-      - targets:
-          - https://spa.com.fj
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: spacomfj
-          service: app
-          criticality: high
-      - targets:
-          - https://furniture.com.fj
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: furniturecomfj
-          service: app
-          criticality: high
-      - targets:
-          - https://pacific.cleaning
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: pacificcleaning
-          service: app
-          criticality: high
-      - targets:
-          - https://fiji.pacific.cleaning
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: fijipacificcleaning
-          service: app
-          criticality: high
-      - targets:
-          - https://testing.erp.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: testingerpgreenleafpacificcom
-          service: frontend
-          criticality: medium
-      - targets:
-          - https://testing.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: testinggreenleafpacificcom
-          service: app
-          criticality: medium
-      - targets:
-          - https://testing2.greenleafpacific.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: testing2greenleafpacificcom
-          service: app
-          criticality: medium
-      - targets:
-          - https://bulataxi.com
-        labels:
-          company: greenleaf
-          alias: cloud
-          stack: bulataxicom
-          service: app
-          criticality: high
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/file_sd/http_targets.yml
+        refresh_interval: 5m
     relabel_configs:
       - source_labels:
           - __address__

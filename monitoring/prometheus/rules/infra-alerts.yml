@@ -3,54 +3,115 @@ groups:
     interval: 30s
     rules:
       - alert: NodeDown
-        expr: up{job="node_exporter_clients"} == 0
+        expr: up{job="node_exporter_clients",monitoring_status!="pending_access"} == 0
         for: 2m
+        keep_firing_for: 2m
         labels:
+          category: infrastructure
+          notification_route: admin
           severity: critical
         annotations:
           summary: "Node {{ $labels.alias }} is down"
           description: "Prometheus cannot scrape node_exporter on {{ $labels.alias }} / {{ $labels.company }}."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#node-or-exporter-down"
 
       - alert: CadvisorDown
         expr: up{job="cadvisor_clients"} == 0
         for: 2m
+        keep_firing_for: 2m
         labels:
+          category: infrastructure
+          notification_route: admin
           severity: warning
         annotations:
           summary: "cAdvisor is down on {{ $labels.alias }}"
           description: "Container runtime metrics are missing for {{ $labels.alias }} / {{ $labels.company }}."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#node-or-exporter-down"
 
       - alert: RootDiskLow
         expr: (node_filesystem_avail_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}) * 100 < 15
         for: 10m
+        keep_firing_for: 5m
         labels:
+          category: capacity
+          notification_route: admin
           severity: warning
         annotations:
           summary: "Low root disk space on {{ $labels.alias }}"
           description: "Root filesystem free space is below 15% on {{ $labels.alias }}."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#disk-capacity"
+
+      - alert: RootDiskCritical
+        expr: (node_filesystem_avail_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}) * 100 < 5
+        for: 5m
+        keep_firing_for: 5m
+        labels:
+          category: capacity
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Critically low root disk space on {{ $labels.alias }}"
+          description: "Root filesystem free space is below 5% on {{ $labels.alias }}."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#disk-capacity"
 
       - alert: HostMemoryHigh
         expr: (1 - (node_memory_MemAvailable_bytes{job="node_exporter_clients"} / node_memory_MemTotal_bytes{job="node_exporter_clients"})) * 100 > 90
         for: 10m
+        keep_firing_for: 5m
         labels:
+          category: capacity
+          notification_route: admin
           severity: warning
         annotations:
           summary: "High host memory usage on {{ $labels.alias }}"
           description: "Host memory usage is above 90% on {{ $labels.alias }}."
 
       - alert: ServiceContainerStopped
-        expr: docker_stack_container_running{state!="running"} == 0
+        expr: |
+          max by (company, alias, stack, service) (
+            docker_stack_container_running
+          ) == 0
+          and on (company, alias, stack, service)
+          rs_monitoring_expected_component_info
         for: 5m
+        keep_firing_for: 2m
         labels:
+          category: application
+          notification_route: admin
           severity: warning
         annotations:
-          summary: "Container stopped: {{ $labels.alias }}/{{ $labels.stack }}/{{ $labels.service }}"
-          description: "Container {{ $labels.container }} in stack {{ $labels.stack }} is not running."
+          summary: "Expected component stopped: {{ $labels.alias }}/{{ $labels.stack }}/{{ $labels.service }}"
+          description: "Every observed container for this catalog-managed component is stopped. One-shot and discovery-pending components are excluded."
+
+      - alert: ExpectedComponentMissing
+        expr: |
+          rs_monitoring_expected_component_info
+          unless on (company, alias, stack, service)
+          docker_stack_container_running
+        for: 15m
+        keep_firing_for: 2m
+        labels:
+          category: application
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Expected component missing: {{ $labels.alias }}/{{ $labels.stack }}/{{ $labels.service }}"
+          description: "The service catalog expects this component to run, but the Docker inventory exporter reports no matching container."
 
       - alert: StackMetricsStale
-        expr: time() - node_textfile_mtime_seconds{job="node_exporter_clients",file=~".*docker-stacks.prom"} > 900
+        expr: |
+          (time() - node_textfile_mtime_seconds{job="node_exporter_clients",file=~".*docker-stacks.prom"} > 900)
+          or
+          (
+            up{job="node_exporter_clients",monitoring_status!="pending_access"} == 1
+            unless on(instance)
+            node_textfile_mtime_seconds{job="node_exporter_clients",file=~".*docker-stacks.prom"}
+          )
         for: 5m
+        keep_firing_for: 2m
         labels:
+          category: monitoring
+          notification_route: admin
           severity: warning
         annotations:
           summary: "Docker stack metrics are stale on {{ $labels.alias }}"
