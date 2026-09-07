@@ -1,0 +1,221 @@
+groups:
+  - name: managed_monitoring_catalog_inventory
+    interval: 1m
+    rules:
+      - record: rs_monitoring_server_inventory_info
+        expr: |
+          max by (company, alias, company_id, server_id, server_status, customer_visible) (
+            label_replace(
+              label_replace(
+                service_catalog_server_info,
+                "company", "$1", "catalog_company", "(.*)"
+              ),
+              "alias", "$1", "catalog_alias", "(.*)"
+            )
+          )
+
+      - record: rs_monitoring_application_inventory_info
+        expr: |
+          max by (company, alias, stack, company_id, server_id, application_id, application_status, customer_visible) (
+            label_replace(
+              label_replace(
+                service_catalog_application_info,
+                "company", "$1", "catalog_company", "(.*)"
+              ),
+              "alias", "$1", "catalog_alias", "(.*)"
+            )
+          )
+
+      - record: rs_monitoring_expected_component_info
+        expr: |
+          max by (company, alias, stack, service, company_id, server_id, application_id, component_id, customer_visible) (
+            label_replace(
+              label_replace(
+                service_catalog_component_info{expected="true",application_status="active"},
+                "company", "$1", "catalog_company", "(.*)"
+              ),
+              "alias", "$1", "catalog_alias", "(.*)"
+            )
+          )
+
+  - name: managed_monitoring_server_rollups
+    interval: 30s
+    rules:
+      - record: rs_monitoring_server_up
+        expr: max by (company, alias) (up{job="node_exporter_clients",monitoring_status!="pending_access"})
+
+      - record: rs_monitoring_server_cpu_utilization_ratio
+        expr: |
+          1 - avg by (company, alias) (
+            rate(node_cpu_seconds_total{job="node_exporter_clients",mode="idle"}[5m])
+          )
+
+      - record: rs_monitoring_server_memory_utilization_ratio
+        expr: |
+          1 - (
+            max by (company, alias) (node_memory_MemAvailable_bytes{job="node_exporter_clients"})
+            /
+            max by (company, alias) (node_memory_MemTotal_bytes{job="node_exporter_clients"})
+          )
+
+      - record: rs_monitoring_server_root_disk_free_ratio
+        expr: |
+          max by (company, alias) (
+            node_filesystem_avail_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+            /
+            node_filesystem_size_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
+          )
+
+  - name: managed_monitoring_application_rollups
+    interval: 30s
+    rules:
+      - record: rs_monitoring_application_up
+        expr: |
+          sum by (company, alias, stack) (
+            rs_monitoring_expected_component_info
+          )
+          == bool
+          (
+            sum by (company, alias, stack) (
+              max by (company, alias, stack, service) (
+                docker_stack_container_running
+              )
+              and on (company, alias, stack, service)
+              rs_monitoring_expected_component_info
+            )
+            or
+            0 * sum by (company, alias, stack) (
+              rs_monitoring_expected_component_info
+            )
+          )
+
+      - record: rs_monitoring_component_up
+        expr: |
+          max by (company, alias, stack, service, container) (
+            docker_stack_container_running
+            and on (company, alias, stack, service)
+            rs_monitoring_expected_component_info
+          )
+
+      - record: rs_monitoring_application_running_components
+        expr: |
+          sum by (company, alias, stack) (
+            max by (company, alias, stack, service) (
+              docker_stack_container_running
+            )
+            and on (company, alias, stack, service)
+            rs_monitoring_expected_component_info
+          )
+
+      - record: rs_monitoring_application_component_count
+        expr: |
+          sum by (company, alias, stack) (
+            rs_monitoring_expected_component_info
+          )
+
+      - record: rs_monitoring_application_cpu_percent
+        expr: |
+          sum by (company, alias, stack) (
+            docker_stack_container_cpu_percent{state="running",stack!~"monitoring.*|node-exporter"}
+          )
+
+      - record: rs_monitoring_application_memory_bytes
+        expr: |
+          sum by (company, alias, stack) (
+            docker_stack_container_memory_usage_bytes{state="running",stack!~"monitoring.*|node-exporter"}
+          )
+
+      - record: rs_monitoring_application_network_rx_bytes_per_second
+        expr: |
+          sum by (company, alias, stack) (
+            clamp_min(rate(docker_stack_container_net_rx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+      - record: rs_monitoring_application_network_tx_bytes_per_second
+        expr: |
+          sum by (company, alias, stack) (
+            clamp_min(rate(docker_stack_container_net_tx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+      - record: rs_monitoring_application_block_read_bytes_per_second
+        expr: |
+          sum by (company, alias, stack) (
+            clamp_min(rate(docker_stack_container_block_read_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+      - record: rs_monitoring_application_block_write_bytes_per_second
+        expr: |
+          sum by (company, alias, stack) (
+            clamp_min(rate(docker_stack_container_block_write_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+  - name: managed_monitoring_component_rollups
+    interval: 30s
+    rules:
+      - record: rs_monitoring_component_cpu_percent
+        expr: |
+          max by (company, alias, stack, service, container) (
+            docker_stack_container_cpu_percent{state="running",stack!~"monitoring.*|node-exporter"}
+          )
+
+      - record: rs_monitoring_component_memory_bytes
+        expr: |
+          max by (company, alias, stack, service, container) (
+            docker_stack_container_memory_usage_bytes{state="running",stack!~"monitoring.*|node-exporter"}
+          )
+
+      - record: rs_monitoring_component_network_rx_bytes_per_second
+        expr: |
+          max by (company, alias, stack, service, container) (
+            clamp_min(rate(docker_stack_container_net_rx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+      - record: rs_monitoring_component_network_tx_bytes_per_second
+        expr: |
+          max by (company, alias, stack, service, container) (
+            clamp_min(rate(docker_stack_container_net_tx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+      - record: rs_monitoring_component_block_read_bytes_per_second
+        expr: |
+          max by (company, alias, stack, service, container) (
+            clamp_min(rate(docker_stack_container_block_read_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+      - record: rs_monitoring_component_block_write_bytes_per_second
+        expr: |
+          max by (company, alias, stack, service, container) (
+            clamp_min(rate(docker_stack_container_block_write_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+          )
+
+  - name: managed_monitoring_service_rollups
+    interval: 30s
+    rules:
+      - record: rs_monitoring_http_up
+        expr: probe_success{job="blackbox_http_services"}
+
+      - record: rs_monitoring_tls_expiry_timestamp_seconds
+        expr: probe_ssl_earliest_cert_expiry{job="blackbox_http_services"}
+
+      - record: rs_monitoring_integrity_up
+        expr: |
+          label_replace(
+            label_replace(
+              label_replace(1 - site_integrity_confirmed_problem, "company", "$1", "site_company", "(.*)"),
+              "alias", "$1", "site_alias", "(.*)"
+            ),
+            "instance", "$1", "site_instance", "(.*)"
+          )
+
+      - record: rs_monitoring_service_event_due_timestamp_seconds
+        expr: |
+          label_replace(
+            label_replace(
+              service_event_due_timestamp_seconds,
+              "company", "$1", "event_company", "(.*)"
+            ),
+            "alias", "$1", "event_alias", "(.*)"
+          )
+
+      - record: rs_monitoring_alert_firing
+        expr: ALERTS{alertstate="firing"}
