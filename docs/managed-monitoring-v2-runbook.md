@@ -164,6 +164,20 @@ Exercise notification behavior in a separate live-mode test instance with an app
 
 Do not advance until every scenario has deterministic database evidence.
 
+## Phase 4a — integrate the shadow pair
+
+After the isolated shadow deployment is stable, move only Alertmanager and the incident gateway into the existing `monitoring` Compose project with `deploy/con-monitoring-v2.override.yml`. Keep the gateway in shadow throughout this layout change and reuse `/var/lib/rabbit-monitoring-v2`; do not create a new incident database.
+
+Follow `docs/deployments/con-integrated-compose.md` for the exact preflight, stopped-state backup, migration and rollback commands. The integrated override uses absolute `/opt/rabbit-monitoring-v2` configuration/secret paths, has no build dependency and defines none of Prometheus, Grafana, Loki or the exporters.
+
+Operational invariants after integration:
+
+- always pass `/root/monitoring/docker-compose.yml` first and use project name `monitoring`;
+- include the common override whenever managing `alertmanager` or `incident-gateway`;
+- omit `deploy/con-monitoring-v2.live.yml` until the actual notification cutover;
+- never run the isolated and integrated pair together;
+- never use `docker compose down` for this migration or the base file alone with `--remove-orphans`.
+
 ## Phase 5 — dashboard validation
 
 Provision the new files without replacing existing dashboards:
@@ -209,13 +223,17 @@ Schedule a short change window.
 1. Record current Grafana contact-point and routing metadata without secret values.
 2. Confirm gateway readiness, database backup, understood retry backlog and current clock synchronization.
 3. Confirm there are zero unexplained open shadow incidents; mode switching intentionally does not replay them.
-4. Stop or disable the legacy production notification path while retaining its configuration for rollback.
-5. If replacing the isolated shadow Compose project with the full-stack Compose services, stop the shadow Alertmanager/gateway first. Both definitions intentionally use the same loopback ports and private-network aliases and must not run together.
-6. Enable the new receiver for one low-risk rule group.
-7. Trigger one controlled firing/recovery lifecycle and verify both messages and their shared incident ID.
-8. Expand routing by criticality or company, not all at once.
-9. Observe duplicates, notification lag, outbox age and orphan recoveries.
-10. Keep the legacy stack collecting metrics throughout cutover.
+4. Confirm the integrated pair from phase 4a is healthy in shadow and the isolated pair is stopped.
+5. Stop integrated Alertmanager to freeze v2 ingress during the sender change.
+6. Recreate only the OpenClaw API with `deploy/openclaw-grafana-paused.override.yml`; require a healthy container and `GRAFANA_WEBHOOK_PROCESSING_ENABLED=false`. Existing Grafana rules and policy remain configured for rollback.
+7. Recreate only the gateway with `deploy/con-monitoring-v2.live.yml` included last; require live readiness before continuing.
+8. Start Alertmanager with the same common-plus-live file set.
+9. Trigger one controlled firing/recovery lifecycle and verify both messages and their shared incident ID.
+10. Expand routing by criticality or company, not all at once.
+11. Observe duplicates, notification lag, outbox age and orphan recoveries.
+12. Keep the legacy stack collecting metrics throughout cutover.
+
+Use the exact commands in `docs/deployments/con-integrated-compose.md`. Stopping Alertmanager before changing senders prevents a new event from being opened in shadow during the cutover gap and prevents simultaneous delivery by the legacy and v2 paths.
 
 Avoid a period where both OpenClaw and the gateway send the same production alert. Dual ingestion is acceptable; dual notification is not.
 
@@ -230,17 +248,17 @@ Recommended initial live gates:
 
 ## Rollback
 
-Rollback is routing and sender control, not data deletion.
+Rollback is routing and sender control, not data deletion. Use the command sequence in `docs/deployments/con-integrated-compose.md`.
 
-1. Disable new outbound claims so no additional messages are sent.
+1. Stop integrated Alertmanager so no new events arrive.
 2. Preserve the incident database and outbox for diagnosis.
-3. Restore the recorded legacy Grafana route/contact point.
-4. Confirm the legacy webhook is receiving events.
-5. Restart the gateway in shadow mode to cancel unsent rows into the retained `cancelled_mode_switch` state; do not replay stale Recovery messages after rollback.
-6. Keep v2 ingestion in shadow only if it cannot affect live notifications.
+3. Recreate only the gateway from the common integrated override, omitting the live file. This switches it to shadow and retains unsent rows as `cancelled_mode_switch`.
+4. Recreate only the OpenClaw API from `/opt/helper/docker-compose.yml` without the paused override, then confirm it is healthy. This restores the existing Grafana route without editing its rules or policy.
+5. Restart integrated Alertmanager with only the shadow override if continued observation is useful.
+6. Reconcile any incident whose DOWN was sent before rollback but whose Recovery was cancelled; do not fabricate or replay a stale message.
 7. Capture timestamps and incident IDs around the rollback boundary.
 
-Do not remove v2 volumes or overwrite `/root/monitoring`. A later cleanup is a separate approved change.
+Do not remove v2 state, overwrite `/root/monitoring`, or run `docker compose down` on the shared project. A later cleanup is a separate approved change.
 
 ## Routine incident operations
 

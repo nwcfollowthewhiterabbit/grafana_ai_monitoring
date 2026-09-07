@@ -46,6 +46,10 @@ This repository state is ready for validation and shadow operation; it does not 
 - `docs/managed-monitoring-v2-architecture.md` - v2 architecture, incident lifecycle, isolation and deployment boundaries.
 - `docs/managed-monitoring-v2-runbook.md` - staged validation, shadow, canary, cutover and rollback procedure.
 - `docs/deployments/con-shadow-2026-09-07.md` - applied shadow deployment record and current cutover blockers.
+- `docs/deployments/con-integrated-compose.md` - production-safe migration of the v2 pair into the existing `monitoring` Compose project, live opt-in and rollback.
+- `deploy/con-monitoring-v2.override.yml` - shadow-by-default integrated Alertmanager/gateway override; no build or existing-service definitions.
+- `deploy/con-monitoring-v2.live.yml` - explicit live-delivery opt-in layered last at cutover.
+- `deploy/openclaw-grafana-paused.override.yml` - reversible OpenClaw API processing pause used to prevent duplicate Telegram sends during cutover.
 - `services/incident-gateway/` - SQLite-backed Alertmanager-to-Telegram incident gateway.
 
 ## Runtime Notes

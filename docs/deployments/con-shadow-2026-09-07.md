@@ -36,3 +36,7 @@ Use the main rollout runbook for routing rollback. Do not delete the incident da
 - Open incidents created in shadow are not replayed when switching to live. They must be reconciled before the controlled cutover.
 
 No production notification cutover should occur until these gaps and the canary gates in `docs/managed-monitoring-v2-runbook.md` are resolved.
+
+## Prepared next layout — not applied
+
+The repository now includes `deploy/con-monitoring-v2.override.yml`, an explicit `deploy/con-monitoring-v2.live.yml` opt-in and the reversible `deploy/openclaw-grafana-paused.override.yml` sender pause. They are intended to move only Alertmanager and the incident gateway into the existing `monitoring` Compose project, then prevent duplicate legacy sends at cutover without modifying Grafana rules or policy. This preparation did not change the running `con` deployment; the isolated shadow project described above remains the recorded state until a separate operator applies `docs/deployments/con-integrated-compose.md`.

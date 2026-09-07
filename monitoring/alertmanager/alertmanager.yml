@@ -42,6 +42,13 @@ inhibit_rules:
       - company
       - alias
   - source_matchers:
+      - alertname="StackMetricsStale"
+    target_matchers:
+      - alertname=~"ServiceContainerStopped|ExpectedComponentMissing"
+    equal:
+      - company
+      - alias
+  - source_matchers:
       - alertname="RootDiskCritical"
     target_matchers:
       - alertname="RootDiskLow"

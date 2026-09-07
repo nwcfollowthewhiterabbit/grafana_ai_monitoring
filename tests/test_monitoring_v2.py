@@ -15,6 +15,7 @@ from unittest import mock
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 CATALOG = ROOT / "monitoring" / "service-catalog.yml"
+ALERTMANAGER = ROOT / "monitoring" / "alertmanager" / "alertmanager.yml"
 if str(SCRIPTS) not in sys.path:
 	sys.path.insert(0, str(SCRIPTS))
 
@@ -43,7 +44,7 @@ class CatalogTests(unittest.TestCase):
 		self.assertEqual(len(catalog["http_services"]), 13)
 		self.assertEqual(validate_catalog(catalog), [])
 
-	def test_runtime_inventory_is_active_and_planned_components_not_expected(self):
+	def test_runtime_inventory_includes_integrated_monitoring_components(self):
 		catalog = load_catalog(CATALOG)
 		companies = {company["id"]: company for company in catalog["companies"]}
 		internal = companies["my-own"]
@@ -52,8 +53,8 @@ class CatalogTests(unittest.TestCase):
 		self.assertEqual(applications["openclaw-stack"]["status"], "active")
 		monitoring = {component["id"]: component for component in applications["monitoring"]["components"]}
 		self.assertTrue(monitoring["prometheus"]["expected"])
-		self.assertFalse(monitoring["alertmanager"]["expected"])
-		self.assertFalse(monitoring["incident-gateway"]["expected"])
+		self.assertTrue(monitoring["alertmanager"]["expected"])
+		self.assertTrue(monitoring["incident-gateway"]["expected"])
 
 	def test_unknown_fields_are_rejected(self):
 		catalog = copy.deepcopy(load_catalog(CATALOG))
@@ -212,6 +213,20 @@ class ConfigRendererTests(unittest.TestCase):
 		expected = renderer.render_http_targets(load_catalog(CATALOG))
 		actual = (ROOT / "monitoring/prometheus/file_sd/http_targets.yml").read_text(encoding="utf-8")
 		self.assertEqual(actual, expected)
+
+
+class AlertmanagerRoutingTests(unittest.TestCase):
+	def test_stale_inventory_inhibits_component_state_cascade(self):
+		config = __import__("yaml").safe_load(ALERTMANAGER.read_text(encoding="utf-8"))
+		self.assertTrue(
+			any(
+				'alertname="StackMetricsStale"' in rule.get("source_matchers", [])
+				and 'alertname=~"ServiceContainerStopped|ExpectedComponentMissing"'
+				in rule.get("target_matchers", [])
+				and rule.get("equal") == ["company", "alias"]
+				for rule in config.get("inhibit_rules", [])
+			)
+		)
 
 
 if __name__ == "__main__":

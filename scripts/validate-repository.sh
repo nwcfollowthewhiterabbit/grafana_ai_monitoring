@@ -75,6 +75,11 @@ docker compose --env-file monitoring/.env.example \
   -f monitoring/docker-compose.yml config --quiet
 docker compose --env-file monitoring/.env.example \
   -f deploy/con-shadow-compose.yml config --quiet
+docker compose --project-name monitoring \
+  -f deploy/con-monitoring-v2.override.yml config --quiet
+docker compose --project-name monitoring \
+  -f deploy/con-monitoring-v2.override.yml \
+  -f deploy/con-monitoring-v2.live.yml config --quiet
 
 if [[ "${SKIP_CONTAINER_VALIDATION:-0}" == "1" ]]; then
   echo "Skipping containerized promtool/amtool checks by explicit request"

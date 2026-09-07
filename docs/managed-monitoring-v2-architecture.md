@@ -87,6 +87,8 @@ inventory + runtime exporters + external probes + service-event scheduler
 
 The initial deployment reuses the existing Prometheus and Grafana and adds Alertmanager plus the gateway. The legacy Grafana-managed notification route remains authoritative during shadow operation. A second Prometheus or Loki is not required.
 
+The first deployment keeps the new pair in its own shadow Compose project. After observation, `deploy/con-monitoring-v2.override.yml` can move only those two services into the existing `monitoring` project while preserving the same state. `deploy/con-monitoring-v2.live.yml` is a separate, explicit notification opt-in; layout integration alone never enables Telegram delivery.
+
 ## Normalized labels
 
 All normalized application and component metrics use:
