@@ -8,7 +8,10 @@ production alert routing and Telegram delivery remain on `con`.
 ## Source and scope
 
 - Source branch: `feat/managed-monitoring-v2`.
-- Source commit: `cbd407f172cf709d83c2ace8c880e9ad1618d369`.
+- Runtime source commit: `cbd407f172cf709d83c2ace8c880e9ad1618d369`.
+- Deployment documentation continued in commit
+  `f02959e5a78453f15f96685aa2908b56dd2eb4cb` and later commits; those changes do
+  not alter the deployed containers.
 - Checkout: `/opt/rabbit-monitoring-v2`.
 - Compose project: `rabbit-monitoring-v2-shadow`.
 - Services started: only `incident-gateway` and `alertmanager`.
@@ -45,6 +48,11 @@ The deployed images were:
 | Incident gateway | `rabbitsystems/incident-gateway:0.1.0` | `sha256:892ce986ece0c5f88b5c92eb9387940364742358296b721e8172736dde1f9eaf` |
 | Alertmanager | `quay.io/prometheus/alertmanager:v0.33.1` | `sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d` |
 
+The locally built gateway image differs from the current production image on
+`con` (`sha256:427ffa...`). Passing tests is not image provenance: the gateway
+has no embedded OCI source revision or immutable reviewed release digest yet.
+Select and verify one exact artifact before cutover.
+
 Both containers became healthy. Runtime checks returned:
 
 ```json
@@ -66,15 +74,26 @@ produce a notification burst.
 
 A later migration therefore needs all of the following:
 
-1. capture and compare the exact active alert set on `con`;
-2. stop state writers and copy SQLite, WAL/SHM when present, and Alertmanager
-   state as one consistent handoff;
-3. run SQLite integrity checks and compare table/row counts on both sides;
-4. keep both gateways in shadow while reconciling active fingerprints and mode
-   generation;
-5. prove that only one Telegram sender can be live;
-6. switch routing and sender ownership in the documented order, run a controlled
-   DOWN → Recovery canary, and retain a tested rollback path.
+1. compare both the exact Prometheus/Alertmanager active-alert set and source
+   SQLite lifecycle aggregates. At observation, the source had 26 open
+   generation-1 carryover incidents, including previously inhibited conditions,
+   and `pending + retry + sending = 0`;
+2. during soak keep source live and destination shadow. At handoff stop the
+   destination pair, stop source Alertmanager, confirm the source outbox remains
+   empty, and then hard-stop source gateway;
+3. copy SQLite, WAL/SHM when present, and Alertmanager state as one consistent
+   stopped-state handoff;
+4. run SQLite integrity checks and compare table/row counts on both sides;
+5. start the restored destination database in shadow, reconcile fingerprints
+   and mode generation, and only then make destination the sole live gateway.
+   Keep source gateway stopped and OpenClaw `processing=false` during the sender
+   change;
+6. switch routing in the documented order, run a controlled DOWN → Recovery
+   canary, and retain a tested rollback path.
+
+This ordering excludes two simultaneous application senders. It cannot provide
+absolute Telegram exactly-once delivery: a crash after `sendMessage` is accepted
+but before the SQLite success commit can still cause one retry duplicate.
 
 Until that explicit cutover, `con` remains the authoritative live monitoring and
 Telegram sender.
