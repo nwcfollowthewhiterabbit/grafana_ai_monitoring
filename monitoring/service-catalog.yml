@@ -639,9 +639,19 @@ companies:
               - {id: prom-label-proxy-greenleaf, service: prom-label-proxy-greenleaf, display_name: Greenleaf Prometheus label proxy, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: prometheus, service: prometheus, display_name: Prometheus, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: snmp-exporter, service: snmp-exporter, display_name: SNMP exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: monitoring-promtail, service: monitoring-promtail, display_name: Standalone Promtail, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: alertmanager, service: alertmanager, display_name: Alertmanager (planned), expected: false, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: incident-gateway, service: incident-gateway, display_name: Incident gateway (planned), expected: false, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: monitoring-promtail
+            stack: monitoring-promtail
+            display_name: Standalone Promtail
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: *monitoring_repository
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: monitoring-promtail, service: monitoring-promtail, display_name: Promtail, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
           - id: openclaw-stack
             stack: openclaw-stack
             display_name: OpenClaw
