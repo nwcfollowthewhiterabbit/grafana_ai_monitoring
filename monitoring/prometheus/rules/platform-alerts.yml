@@ -7,6 +7,8 @@ groups:
         for: 5m
         keep_firing_for: 2m
         labels:
+          stack: host
+          service: windows-exporter
           category: windows
           notification_route: admin
           severity: critical
@@ -20,6 +22,7 @@ groups:
         for: 2m
         keep_firing_for: 2m
         labels:
+          stack: windows
           category: windows
           notification_route: admin
           severity: critical
@@ -33,6 +36,8 @@ groups:
         for: 5m
         keep_firing_for: 2m
         labels:
+          stack: hyperv
+          service: virtual-machine
           category: windows
           notification_route: admin
           severity: warning
@@ -46,6 +51,8 @@ groups:
         for: 30m
         keep_firing_for: 5m
         labels:
+          stack: backups
+          service: backup-path
           category: backup
           notification_route: admin
           severity: critical
@@ -62,6 +69,8 @@ groups:
         for: 10m
         keep_firing_for: 5m
         labels:
+          stack: backups
+          service: backup
           category: backup
           notification_route: admin
           severity: critical
@@ -78,6 +87,8 @@ groups:
         for: 5m
         keep_firing_for: 2m
         labels:
+          stack: network
+          service: snmp
           category: mikrotik
           notification_route: admin
           severity: critical
@@ -94,6 +105,8 @@ groups:
         for: 5m
         keep_firing_for: 2m
         labels:
+          stack: network
+          service: interface
           category: mikrotik
           notification_route: admin
           severity: warning

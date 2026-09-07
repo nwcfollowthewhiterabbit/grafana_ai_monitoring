@@ -7,6 +7,8 @@ groups:
         for: 2m
         keep_firing_for: 2m
         labels:
+          stack: host
+          service: node-exporter
           category: infrastructure
           notification_route: admin
           severity: critical
@@ -20,6 +22,8 @@ groups:
         for: 2m
         keep_firing_for: 2m
         labels:
+          stack: host
+          service: cadvisor
           category: infrastructure
           notification_route: admin
           severity: warning
@@ -33,6 +37,8 @@ groups:
         for: 10m
         keep_firing_for: 5m
         labels:
+          stack: host
+          service: root-filesystem
           category: capacity
           notification_route: admin
           severity: warning
@@ -46,6 +52,8 @@ groups:
         for: 5m
         keep_firing_for: 5m
         labels:
+          stack: host
+          service: root-filesystem
           category: capacity
           notification_route: admin
           severity: critical
@@ -59,6 +67,8 @@ groups:
         for: 10m
         keep_firing_for: 5m
         labels:
+          stack: host
+          service: memory
           category: capacity
           notification_route: admin
           severity: warning
@@ -110,6 +120,8 @@ groups:
         for: 5m
         keep_firing_for: 2m
         labels:
+          stack: monitoring
+          service: docker-inventory
           category: monitoring
           notification_route: admin
           severity: warning
