@@ -1,6 +1,8 @@
 # Managed Monitoring v2 rollout and operations runbook
 
-This runbook moves Managed Monitoring v2 from repository validation to shadow operation, controlled notification and live cutover. It assumes the legacy `/root/monitoring` stack remains available for rollback.
+This runbook documents the completed path from repository validation through shadow operation and live cutover, followed by current incident procedures. The preserved `/root/monitoring` base and legacy Grafana/OpenClaw route remain available for rollback.
+
+Current `con` status: phases 0–7 were completed on 2026-09-07. The production gateway is live in Compose project `monitoring`, and OpenClaw's legacy Grafana processing is paused. Do not repeat the rollout phases on the current host. Use `docs/deployments/con-integrated-compose.md` for the active file set and rollback commands; use the routine incident sections below for daily operation.
 
 ## Safety rules
 
@@ -9,7 +11,9 @@ This runbook moves Managed Monitoring v2 from repository validation to shadow op
 - Do not delete monitoring data, Docker data, release backups or stack backups as an implicit deployment step.
 - Do not start a second Prometheus or Loki while disk capacity fails the preflight gate.
 - Do not let a second process call Telegram `getUpdates`, `setWebhook` or `deleteWebhook` with the existing bot token.
-- Do not enable two Telegram senders for the same production alert route during cutover.
+- Do not enable two Telegram senders for the same production alert route. While
+  the gateway is live, every OpenClaw API recreate must include
+  `deploy/openclaw-grafana-paused.override.yml`.
 - Keep the incident database and outbox during rollback; stopping delivery must not erase state.
 
 ## Phase 0 — repository validation
@@ -120,7 +124,7 @@ Before shadow ingestion, back up and validate the narrowly scoped Prometheus cha
 
 ## Phase 4 — shadow ingestion
 
-Feed the gateway copies of production events while outbound notification remains disabled. The legacy webhook remains authoritative.
+During the historical shadow phase, feed the gateway copies of production events while outbound notification remains disabled. The legacy webhook remains authoritative only for that phase; it is paused in the current live deployment.
 
 For every inbound event, verify:
 
@@ -193,7 +197,7 @@ Validate the following selections:
 4. Dashboard links preserve the selected hierarchy and time range.
 5. Application CPU/RAM are sums of running components.
 6. Network and block I/O use rates and remain non-negative across container restarts.
-7. Missing planned metrics display No data rather than a false green status, except explicitly documented numeric fallbacks.
+7. Optional or currently unavailable metrics display No data rather than a false green status, except explicitly documented numeric fallbacks.
 8. External HTTP state can disagree with component state without one masking the other.
 
 For Greenleaf, test with a non-admin customer account. Confirm in browser/network inspection that label enumeration and PromQL cannot escape `company=greenleaf`. A hidden company variable alone is not an isolation control.
@@ -279,12 +283,15 @@ Verify that the message names an existing incident generation and that its DOWN 
 Check independently:
 
 - DNS/TCP/TLS/HTTP result;
-- browser resource failures and obvious empty/error output;
+- integrity-check resource failures and obvious empty/error output;
 - server and required component health;
 - whether a live re-probe succeeded;
 - whether the source alert cleared before the configured failure threshold.
 
-A successful container check does not close an external-site incident. A successful secondary probe may suppress opening a false incident, but it must also prevent a later standalone Recovery.
+A successful container check or scheduled supporting probe does not directly
+open or close an external-site incident. The gateway follows only the matching
+Prometheus alert transition; disagreement between signals is diagnostic
+evidence, never a reason to manufacture a Recovery.
 
 ### Service event due
 
@@ -297,7 +304,10 @@ Use this section for `PrometheusConfigReloadFailed`, `AlertmanagerNotDiscovered`
 1. Check component health and readiness independently; a running container is not sufficient.
 2. Verify Prometheus retained its last valid configuration and inspect the reload timestamp/error without reloading blindly.
 3. Confirm Prometheus discovers exactly the intended Alertmanager endpoint.
-4. Confirm Alertmanager can resolve the private gateway address and receives a successful authenticated webhook response.
+4. Confirm Alertmanager can resolve the private gateway address and receives a
+   successful webhook response. The current `con` hop is private-network-only
+   and does not set `ALERT_WEBHOOK_TOKEN`; if authentication is enabled later,
+   validate the configured header without displaying its value.
 5. Check gateway database readiness, mode generation, worker health, oldest pending/retry outbox item, attempt count, next-attempt time and last error.
 6. Keep application incidents open while the notification pipeline is impaired; do not manufacture recoveries to clear the queue.
 
@@ -320,11 +330,13 @@ After repair, require a fresh successful cycle before resolving the checker inci
 1. Identify the endpoint and application from `company`, `alias` and `stack`.
 2. Compare Blackbox history with the lower-frequency scheduled checker.
 3. Inspect DNS, TCP, TLS, redirect chain, HTTP status and response duration.
-4. Check the browser/integrity signal for failed CSS, JavaScript or images and empty/error output.
+4. Check the HTTP/HTML integrity signal for failed CSS, JavaScript or image fetches and empty/error output.
 5. Check application components separately; do not infer user-visible success from healthy containers.
 6. Re-probe from a controlled location. Record whether the failure is origin, edge/CDN or checker-specific.
 
-Resolve only from recovery evidence for the same incident fingerprint. A successful secondary probe that prevents DOWN must also prevent a later standalone Recovery.
+Resolve only when Prometheus sends recovery for the same incident fingerprint.
+The scheduled checker is supporting evidence and does not suppress DOWN or
+generate Recovery in the v2 lifecycle.
 
 ## Node or exporter down
 

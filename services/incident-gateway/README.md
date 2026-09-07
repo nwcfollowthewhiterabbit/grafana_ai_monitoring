@@ -4,6 +4,13 @@ Small stdlib-only Alertmanager-to-Telegram gateway with an explicit incident
 lifecycle. SQLite is the source of truth; an HTTP success is returned only after
 the complete webhook transaction commits.
 
+Production on `con` runs this service as `monitoring-incident-gateway` in the
+existing `monitoring` Compose project. `deploy/con-monitoring-v2.override.yml`
+provides the fail-safe shadow definition and `deploy/con-monitoring-v2.live.yml`
+is layered last to enable delivery. The active state is
+`/var/lib/rabbit-monitoring-v2/incident-gateway`; operational and rollback
+commands are documented in `docs/deployments/con-integrated-compose.md`.
+
 ## Guarantees
 
 - One open incident per Alertmanager fingerprint.

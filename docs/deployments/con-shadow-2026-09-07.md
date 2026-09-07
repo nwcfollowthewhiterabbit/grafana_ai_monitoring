@@ -15,7 +15,7 @@ Status: historical. The shadow project was replaced by the integrated live deplo
 - Loaded four validated Prometheus rule files and the generated HTTP `file_sd` inventory. Alertmanager and gateway scrape targets were both `up` after reload.
 - Provisioned three admin dashboards in Grafana org 1 and three Greenleaf customer dashboards in org 2.
 
-The firing → duplicate firing → resolved smoke test produced one incident, one firing event, one resolved event and zero outbox rows. The production Telegram route was not tested or cut over; the legacy Grafana/OpenClaw route remains authoritative.
+The firing → duplicate firing → resolved smoke test produced one incident, one firing event, one resolved event and zero outbox rows. At that historical stage the production Telegram route had not been tested or cut over, and the legacy Grafana/OpenClaw route was authoritative.
 
 ## Preserved state and rollback evidence
 
@@ -30,12 +30,18 @@ Use the main rollout runbook for routing rollback. Do not delete the incident da
 
 ## Observed blockers before notification cutover
 
-- Root filesystem is 95% used with about 4.0 GiB free. The shadow pair is small, but a parallel Prometheus/Loki deployment is blocked.
-- Ten scrape targets are currently down. `rentall-vpn.service` has been failed since 2026-08-31, which explains the current Windows/MikroTik path failures.
-- Greenleaf `cloud` node metrics are reachable, but cAdvisor and Docker inventory metrics are absent. Thirteen expected Greenleaf components therefore remain unconfirmed.
-- Backup metrics are absent/stale and correctly produce shadow evidence rather than a green status.
-- The service-event registry deliberately contains zero entries until real domain/subscription dates and owners are verified.
-- Open incidents created in shadow are not replayed when switching to live. They must be reconciled before the controlled cutover.
+- Root filesystem was 95% used with about 4.0 GiB free. The shadow pair was
+  small, but a parallel Prometheus/Loki deployment was blocked.
+- Ten scrape targets were down. `rentall-vpn.service` had been failed since
+  2026-08-31, which explained the Windows/MikroTik path failures observed then.
+- Greenleaf `cloud` node metrics were reachable, but cAdvisor and Docker
+  inventory metrics were absent. Thirteen expected Greenleaf components
+  therefore remained unconfirmed.
+- Backup metrics were absent/stale and correctly produced non-green shadow evidence.
+- The service-event registry deliberately contained zero entries because real
+  domain/subscription dates and owners had not been verified.
+- Open incidents created in shadow would not be replayed when switching to live;
+  they had to be reconciled before the controlled cutover.
 
 These findings were carried into the controlled cutover record instead of being discarded or replayed as new Telegram incidents.
 

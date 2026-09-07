@@ -1,59 +1,61 @@
-# Monitoring Roadmap
+# Managed Monitoring Roadmap
 
-## Now
+This roadmap separates the deployed production baseline from operational remediation and future product work. The current deployment record is `docs/deployments/con-integrated-compose.md`.
 
-- Service stack resource dashboards by company, node, stack, and service.
-- Docker log collection to Loki with bounded labels: `company`, `alias`, `stack`, `service`, `container`.
-- HTTP availability and TLS probes through Blackbox Exporter for diagnostics.
-- Queued scheduled public checks for notification-grade public-site availability.
-- Service catalog as code in `monitoring/service-catalog.yml`.
-- Greenleaf `cloud` public Caddy endpoints are monitored as blackbox HTTP services.
+## Production baseline
 
-## Next
+- Hierarchical service catalog: company → server → application → component.
+- Existing Prometheus, Grafana, Loki, Blackbox, node, cAdvisor and SNMP collection reused on `con`.
+- Alertmanager routing and inhibition integrated into the `monitoring` Compose project.
+- SQLite incident gateway with durable, idempotent DOWN → Recovery delivery to Telegram.
+- Legacy Grafana → OpenClaw alert processing paused and retained only as the rollback sender.
+- Admin Fleet → Server → Application dashboards in Grafana org 1.
+- Greenleaf customer dashboards in org 2 through a server-enforced `company=greenleaf` Prometheus proxy.
+- Frequent HTTP/TLS probes, queued retrying site checks, and independent page-integrity checks.
+- Service-event registry/exporter framework for domains, certificates, subscriptions and periodic actions.
+- CI validation for catalog/config generation, dashboards, Compose, Prometheus rules, Alertmanager config and gateway lifecycle tests.
 
-- Expand the service catalog with owners, repository links, backup policy, and runbook links.
-- Add confirmed URLs for internal/client services that are currently only visible as Docker stacks.
-- Keep Greenleaf public monitoring synchronized with `greenleaf_cloud-server:ops/public-sites.yml`.
-- Add explicit maintenance-window handling for planned Caddy/public-routing work.
-- Migrate node log collection from Promtail to Grafana Alloy after the current dashboards are stable.
-- Add OpenTelemetry/Tempo tracing for ERPNext, bots, APIs, and OpenClaw services.
-- Add backup verification metrics: last successful backup, backup size, restore-check age, and storage free space.
-- Add security/audit collection: SSH failures, sudo events, Docker restarts, pending updates, and exposed ports.
+## Immediate operational remediation
 
-## Rentall Backup Backlog
+- Restore safe free-space headroom on `con`; root usage was 95% at cutover. Review retention and backup ownership before deleting anything.
+- Repair `rentall-vpn.service`, then verify both Windows exporters and both MikroTik SNMP targets recover.
+- Restore Greenleaf `cloud` cAdvisor and Docker inventory metrics. `ExpectedComponentMissing` remains inhibited while inventory is stale.
+- Repair and verify Greenleaf mount, ERP and per-stack backup metrics; add restore-test age rather than treating file presence as sufficient proof.
+- Renew or replace the certificate behind the active `TLSCertificateExpiryCritical` incident.
+- Restore the two unavailable Linux node-exporter paths or explicitly change their inventory status after review.
+- Establish and test routine rotation for the shared monitoring credentials and runtime secret files without committing values.
+
+## Next product increment
+
+- Populate real domain/subscription/service renewal dates, owners and customer-recipient policy in the service-event registry.
+- Add maintenance windows and reviewed silence ownership.
+- Add acknowledgement, snooze and reminder state to the incident control plane.
+- Add automatic, verified backups for the incident database and alert-delivery audit state.
+- Add a small external watchdog in a different failure domain for Prometheus freshness, gateway readiness and notification canaries.
+- Add direct-origin probes where an edge/CDN success can hide an origin failure.
+- Complete owner, repository and runbook links for every managed application.
+- Add explicit notification routing by company/criticality after recipient policy is verified.
+
+## Rentall backup backlog
 
 - Configure automatic cloud backups for M.E.Doc on `192.168.112.20`.
 - Configure automatic cloud backups for 1C on `192.168.112.19`.
-- Add monitoring for M.E.Doc and 1C backup freshness, backup size, exit status, and cloud destination availability.
-- Configure Hyper-V VM backups on `192.168.112.20` for:
-  - RDP / 1C VM `192.168.112.19`;
-  - MikroTik VM `192.168.112.1`.
-- Add monitoring for Hyper-V VM backup freshness, last result, backup size, and backup storage free space.
-- Add Grafana panels and alert rules after backup jobs produce stable metrics.
+- Configure Hyper-V backups for the RDP/1C and MikroTik VMs.
+- Export freshness, size, result, destination availability and restore-check age.
+- Enable the corresponding alert rules only after stable source metrics exist.
 
-## Alerting
+## Later
 
-Grafana-managed alert rules exist for immediate infrastructure notifications:
+- Migrate node log collection from Promtail to Grafana Alloy after equivalent coverage is proven.
+- Add OpenTelemetry/Tempo tracing for ERPNext, bots, APIs and OpenClaw services.
+- Add bounded security/audit signals for SSH failures, sudo events, Docker restarts, pending updates and exposed ports.
+- Evaluate a dedicated monitoring bot to reduce the shared Telegram credential blast radius.
+- Build a Rabbit Systems branded customer portal only after the Grafana-based managed-monitoring workflow is stable.
 
-- `cloud-s3-mount-down`: `/greenleafbackup` unhealthy for more than 30 minutes.
-- `cloud-erp-backup-stale`: ERP backup older than 7 hours.
-- `cloud-daily-stack-backup-stale`: non-ERP stack backup missing or older than 25 hours.
-- `public-site-down`: scheduled public checker confirms at least 3 failed checks
-  in one cycle. The checker runs every 3 hours and retries initially failed URLs
-  3 more times with 5 minutes between retry rounds.
+## Deliberate non-goals
 
-Pending notification delivery setup:
-
-- Telegram/email contact points.
-- Notification policy routing to the selected contact point.
-- Service-specific ownership from `monitoring/service-catalog.yml`.
-- Runbook links in every notification.
-- Noise control with grouping, inhibition, and maintenance windows.
-- Split public checks into edge-path and direct-origin probes where DNS or
-  Cloudflare policy can hide origin behavior.
-
-## Greenleaf Public Endpoint Backlog
-
-- Keep `beautylab.spa.com.fj` and `trexfiji.com` out of public alerts until their DNS/certificate state is production-ready.
-- Track `bulataxi.com` as monitored but with DNS/certificate remediation owned by the production ops repo.
-- Add runbook links to public-site alert annotations after notification routing is configured.
+- No duplicate Prometheus or Loki on the capacity-constrained monitoring host.
+- No automatic discovery becoming managed inventory without review.
+- No golden-page comparison that breaks whenever normal website content changes.
+- No customer access to shared Loki data without enforceable tenant isolation.
+- No deletion of legacy Grafana/OpenClaw configuration until rollback is intentionally retired.

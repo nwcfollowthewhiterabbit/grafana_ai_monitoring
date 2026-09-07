@@ -75,7 +75,7 @@ groups:
           severity: critical
         annotations:
           summary: "Scheduled public-site checker metrics are missing"
-          description: "The notification-grade site checker has never produced a visible metric."
+          description: "The independent supporting public-site checker has never produced a visible metric."
           runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/managed-monitoring-v2-runbook.md#synthetic-checkers"
 
       - alert: ScheduledSiteCheckerStale

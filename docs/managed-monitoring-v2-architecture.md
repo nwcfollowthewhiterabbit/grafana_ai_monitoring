@@ -33,7 +33,7 @@ The read-only audit on 2026-09-07 found:
 - only 4.6 GiB free on the root filesystem, while the existing Prometheus and Loki data occupied about 8.9 GiB;
 - live files that differ from the repository, notably Blackbox DNS/identity modules and an older live service-stacks dashboard.
 
-The audit also reproduced the principal incident-lifecycle defect. A firing website alert was suppressed after a successful secondary probe, but its later resolved event was sent to Telegram. Current code can also mark `telegram_notified` from the presence of message text rather than from a successful Bot API result. The existing pipeline therefore cannot guarantee DOWN → Recovery ordering.
+The audit also reproduced the principal incident-lifecycle defect in the legacy OpenClaw path. A firing website alert was suppressed after a successful secondary probe, but its later resolved event was sent to Telegram. The audited legacy implementation could also mark `telegram_notified` from the presence of message text rather than from a successful Bot API result. That sender is now paused; the v2 gateway replaces its incident-lifecycle behavior and enforces DOWN → Recovery ordering.
 
 ## Design principles
 
@@ -87,7 +87,7 @@ inventory + runtime exporters + external probes + service-event scheduler
 
 The deployment reuses the existing Prometheus and Grafana and adds Alertmanager plus the gateway. During shadow operation the legacy Grafana-managed notification route remained authoritative; after the controlled cutover the gateway became authoritative and OpenClaw's Grafana processing was paused. A second Prometheus or Loki is not required.
 
-The first deployment keeps the new pair in its own shadow Compose project. After observation, `deploy/con-monitoring-v2.override.yml` can move only those two services into the existing `monitoring` project while preserving the same state. `deploy/con-monitoring-v2.live.yml` is a separate, explicit notification opt-in; layout integration alone never enables Telegram delivery.
+The rollout first used an isolated shadow Compose project, then moved only Alertmanager and the gateway into the existing `monitoring` project while preserving state. Production now layers `deploy/con-monitoring-v2.override.yml` and `deploy/con-monitoring-v2.live.yml` over the drift-preserving `/root/monitoring/docker-compose.yml`. The shadow Compose file remains a test/rollback artifact, not the active layout.
 
 ## Normalized labels
 
@@ -106,7 +106,7 @@ Labels must be bounded. Incident IDs, URLs, error messages, certificate serials 
 
 The new dashboards use catalog-aware recording metrics for identity and health. Raw exporter fallbacks remain only for resource/detail signals where absence cannot be misread as a healthy state.
 
-| Planned metric | Required labels | Meaning / current fallback |
+| Metric | Required labels | Meaning / current fallback |
 | --- | --- | --- |
 | `rs_monitoring_server_inventory_info` | bounded server hierarchy/status | Catalog inventory used to populate the operator hierarchy without treating pending access as DOWN. |
 | `rs_monitoring_application_inventory_info` | bounded application hierarchy/status | Catalog application inventory, independent from whether runtime metrics happen to exist. |
@@ -172,10 +172,15 @@ Application infrastructure and the external interface are separate checks:
 
 - infrastructure: server reachability, required components, healthchecks and resources;
 - external HTTP: DNS/connect/TLS/HTTP and response timing;
-- integrity/browser: empty or error page, failed critical CSS/JS/images and obvious rendering failure;
+- integrity heuristic: empty or error page, failed critical CSS/JS/image fetches
+  and obvious malformed-result evidence;
 - backup/continuity: last successful, restorable backup signal.
 
-The integrity check looks for evidence of breakage. It must not pin normal content, text or images to a golden page. A low-cost model may classify captured evidence later, but deterministic browser/network failures remain primary evidence.
+The current integrity checker uses HTTP/HTML/resource heuristics; it does not
+render the page in a browser. It looks for evidence of breakage and must not pin
+normal content, text or images to a golden page. A low-cost model or browser
+renderer may classify richer captured evidence later, but deterministic
+HTTP/resource failures remain primary evidence.
 
 ## Service events
 
@@ -218,22 +223,24 @@ Customer isolation does not depend on a hidden variable. Org 2 uses its own data
 
 Future customers receive separate organizations and independently enforced label values. Dashboard JSON can be generated from the same templates, but credentials, organizations and datasource provisioning remain explicit deployment steps.
 
-## Deployment boundaries
+## Production deployment boundaries
 
-The first v2 deployment should use:
+The deployed topology uses:
 
-- `/opt/rabbit-monitoring-v2` as a separate checkout;
-- a distinct Compose project and persistent data root, deliberately attached to the existing private `monitoring_default` network for Prometheus/Alertmanager/gateway name resolution;
-- loopback-only host publishing, initially on a currently unused port such as 8180;
+- `/opt/rabbit-monitoring-v2` as the versioned checkout;
+- the existing Compose project and private network, both named `monitoring`;
+- `/root/monitoring/docker-compose.yml` as the preserved live base plus the common and live v2 layers from `deploy/`;
+- loopback-only host publishing for Alertmanager and the incident gateway;
 - no Docker socket in the incident gateway;
-- the existing Prometheus as a read/event source during shadow mode;
-- a dedicated persistent incident database or schema and transactional outbox.
+- the existing Prometheus as the sole rule evaluator and event source;
+- `/var/lib/rabbit-monitoring-v2` for the dedicated Alertmanager and incident state;
+- the OpenClaw Grafana-processing override while the gateway is the authoritative sender.
 
-The existing containers and `/var/lib/monitoring` data remain untouched during shadow deployment. Any scoped Prometheus configuration needed to copy events into Alertmanager must be backed up, validated and reloaded independently; never overwrite `/root/monitoring` wholesale.
+The existing Prometheus, Grafana and Loki data under `/var/lib/monitoring` were not migrated or duplicated. The live Blackbox/Loki drift was preserved rather than overwritten. Never copy the repository wholesale onto `/root/monitoring`, and never operate the production Compose project with a partial file set plus `--remove-orphans`.
 
 ## Capacity and drift constraints
 
-At audit time the root filesystem was 94% used. A duplicate full-retention Prometheus/Loki would exceed available capacity. Before adding a second TSDB, expand storage or perform a separately approved, recoverable cleanup. Backups and Docker logs are large candidates for review, not automatic deletion targets.
+At cutover the root filesystem was 95% used. A follow-up live check on 2026-09-07 showed about 4.0 GiB free and `RootDiskLow` firing. A duplicate full-retention Prometheus/Loki would exceed available capacity. Before adding a second TSDB, expand storage or perform a separately approved, recoverable cleanup. Backups and Docker logs are large candidates for review, not automatic deletion targets.
 
 Before any deployment, capture and reconcile:
 
@@ -255,13 +262,13 @@ The monitoring host is currently part of the monitored system. A later external 
 - scheduled-check freshness;
 - notification canary delivery.
 
-It should run in a different failure domain and use a separate notification route. This is backlog and is not required for the initial local shadow deployment.
+It should run in a different failure domain and use a separate notification route. This remains backlog for the live deployment.
 
-## Explicit non-goals for the first cut
+## Explicit non-goals
 
 - replacing the current Prometheus/Loki storage immediately;
 - automatic discovery becoming managed inventory without review;
 - semantic comparison of website content against a saved golden page;
 - customer access to shared logs;
 - making OpenClaw the long-term incident database;
-- deleting legacy rules or live server-only configuration during shadow mode.
+- deleting the retained legacy sender or live server-only configuration before rollback is intentionally retired.
