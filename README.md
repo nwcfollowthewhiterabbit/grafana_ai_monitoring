@@ -89,6 +89,7 @@ The validated catalog currently contains 3 companies, 7 servers, 41 applications
 - `docs/managed-monitoring-v2-runbook.md` - staged validation, shadow, canary, cutover and rollback procedure.
 - `docs/deployments/con-shadow-2026-09-07.md` - historical shadow deployment and findings carried into cutover.
 - `docs/deployments/con-integrated-compose.md` - current production file set, applied migration evidence and rollback.
+- `docs/deployments/deployment-shadow-2026-09-07.md` - isolated, credential-free shadow stage on the future deployment host; production routing remains on `con`.
 - `deploy/con-monitoring-v2.override.yml` - shadow-by-default integrated Alertmanager/gateway override; no build or existing-service definitions.
 - `deploy/con-monitoring-v2.live.yml` - mandatory final layer for live gateway delivery; omitting it returns the gateway to shadow mode.
 - `deploy/openclaw-grafana-paused.override.yml` - required OpenClaw API layer for as long as the gateway is authoritative; omitting it re-enables the legacy sender.
