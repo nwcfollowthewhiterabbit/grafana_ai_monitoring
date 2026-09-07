@@ -2,6 +2,8 @@
 
 Managed Monitoring v2 was deployed on `con` from commit `6ccc290` in shadow mode. This record contains no credentials.
 
+Status: historical. The shadow project was replaced by the integrated live deployment recorded in `docs/deployments/con-integrated-compose.md`; its bind-mounted state was preserved.
+
 ## Applied scope
 
 - Checkout: `/opt/rabbit-monitoring-v2`.
@@ -35,8 +37,8 @@ Use the main rollout runbook for routing rollback. Do not delete the incident da
 - The service-event registry deliberately contains zero entries until real domain/subscription dates and owners are verified.
 - Open incidents created in shadow are not replayed when switching to live. They must be reconciled before the controlled cutover.
 
-No production notification cutover should occur until these gaps and the canary gates in `docs/managed-monitoring-v2-runbook.md` are resolved.
+These findings were carried into the controlled cutover record instead of being discarded or replayed as new Telegram incidents.
 
-## Prepared next layout — not applied
+## Subsequent transition
 
-The repository now includes `deploy/con-monitoring-v2.override.yml`, an explicit `deploy/con-monitoring-v2.live.yml` opt-in and the reversible `deploy/openclaw-grafana-paused.override.yml` sender pause. They are intended to move only Alertmanager and the incident gateway into the existing `monitoring` Compose project, then prevent duplicate legacy sends at cutover without modifying Grafana rules or policy. This preparation did not change the running `con` deployment; the isolated shadow project described above remains the recorded state until a separate operator applies `docs/deployments/con-integrated-compose.md`.
+Commit `1e84d41` added `deploy/con-monitoring-v2.override.yml`, the explicit live opt-in and the reversible OpenClaw sender pause. On 2026-09-07 the pair moved into project `monitoring`; the stopped shadow containers were removed without volumes, and the same `/var/lib/rabbit-monitoring-v2` state continued in live generation 2. See `docs/deployments/con-integrated-compose.md` for verification and rollback evidence.

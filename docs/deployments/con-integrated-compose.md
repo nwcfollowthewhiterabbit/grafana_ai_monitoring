@@ -1,8 +1,36 @@
 # con integrated Compose deployment
 
-Status: prepared in the repository, not applied to `con` by this document change.
+Status: applied to `con` on 2026-09-07 from commit `1e84d41` and verified live.
 
 This procedure moves the already deployed Alertmanager and incident gateway from the isolated `rabbit-monitoring-v2-shadow` Compose project into the existing `monitoring` project. It reuses the same images, configuration, secret files and `/var/lib/rabbit-monitoring-v2` state. It does not recreate or redefine Prometheus, Grafana, Loki or any exporter.
+
+## Applied change record
+
+- The pre-migration state is stored at `/var/backups/rabbit-monitoring-v2/pre-integrated-1e84d41`. It contains both complete bind directories and passed SQLite `integrity_check` with 36 incidents, 46 events and zero outbox rows.
+- The isolated project was stopped before the backup. Alertmanager and the gateway then started as `monitoring-alertmanager` and `monitoring-incident-gateway` in project `monitoring`; the eight pre-existing monitoring container IDs did not change.
+- The stopped `rabbit-monitoring-v2-shadow` containers were removed without `-v`. `/var/lib/rabbit-monitoring-v2` remained the active state root.
+- OpenClaw's API was recreated only with `deploy/openclaw-grafana-paused.override.yml`. It remained healthy and reported `GRAFANA_WEBHOOK_PROCESSING_ENABLED=false`; its Telegram webhook ownership and other bot functions were not changed.
+- The gateway entered `live` mode at delivery generation 2 with an empty outbox. Alertmanager and gateway are healthy and both Prometheus scrape targets report `up=1`.
+- End-to-end canary incident `37` travelled through Alertmanager and produced exactly one delivered DOWN followed by exactly one delivered Recovery. Both outbox rows have Telegram message IDs and there are no pending/retry rows.
+- Grafana 12.0.0, all three checker timers and the `monitoring` application recording metric remained healthy. Catalog and runtime metrics both report the integrated Alertmanager and gateway as present.
+
+The cutover deliberately accepted 26 already-known open shadow incidents in generation 1. They were not replayed into Telegram and cannot produce standalone Recovery notifications in generation 2. After each source resolves, a later recurrence opens a new generation-2 incident with the full DOWN → Recovery lifecycle. The accepted carryover was:
+
+| Alert | Count |
+| --- | ---: |
+| ExpectedComponentMissing | 13 |
+| MikroTikSNMPDown | 2 |
+| NodeDown | 2 |
+| WindowsExporterDown | 2 |
+| CadvisorDown | 1 |
+| CloudBackupMetricsMissing | 1 |
+| CloudBackupMountUnhealthy | 1 |
+| CloudERPBackupStale | 1 |
+| RootDiskLow | 1 |
+| StackMetricsStale | 1 |
+| TLSCertificateExpiryCritical | 1 |
+
+The added `StackMetricsStale` inhibition prevents the 13 Greenleaf component-missing symptoms from being delivered as a cascade while Docker inventory is unavailable. After inhibition, Alertmanager showed 13 non-inhibited active problems. These remain real operational follow-up work, not deployment failures. Root usage is still 95% with about 4.2 GiB free; no extra Prometheus or Loki was deployed.
 
 ## Files and invariants
 

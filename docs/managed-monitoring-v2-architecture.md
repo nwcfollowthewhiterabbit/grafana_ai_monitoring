@@ -1,6 +1,6 @@
 # Rabbit Systems Managed Monitoring v2
 
-Status: v2 repository implementation is available for validation and shadow deployment. It includes the catalog model, generated targets and dashboards, Prometheus/Alertmanager rules, the SQLite incident gateway and an isolated shadow Compose file. This status does not imply a production notification cutover: the current monitoring stack remains authoritative until the shadow and cutover gates in the runbook are satisfied.
+Status: v2 is deployed on `con`. The existing Prometheus, Grafana, Loki and exporters are reused; Alertmanager and the SQLite incident gateway run in the existing `monitoring` Compose project. Live Telegram delivery is enabled through the gateway, and legacy Grafana processing in OpenClaw is paused but retained for rollback. The applied change record is in `docs/deployments/con-integrated-compose.md`.
 
 ## Outcome
 
@@ -85,7 +85,7 @@ inventory + runtime exporters + external probes + service-event scheduler
            admin/customer Grafana views
 ```
 
-The initial deployment reuses the existing Prometheus and Grafana and adds Alertmanager plus the gateway. The legacy Grafana-managed notification route remains authoritative during shadow operation. A second Prometheus or Loki is not required.
+The deployment reuses the existing Prometheus and Grafana and adds Alertmanager plus the gateway. During shadow operation the legacy Grafana-managed notification route remained authoritative; after the controlled cutover the gateway became authoritative and OpenClaw's Grafana processing was paused. A second Prometheus or Loki is not required.
 
 The first deployment keeps the new pair in its own shadow Compose project. After observation, `deploy/con-monitoring-v2.override.yml` can move only those two services into the existing `monitoring` project while preserving the same state. `deploy/con-monitoring-v2.live.yml` is a separate, explicit notification opt-in; layout integration alone never enables Telegram delivery.
 
