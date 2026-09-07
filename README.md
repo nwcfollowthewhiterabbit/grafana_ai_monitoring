@@ -45,6 +45,7 @@ This repository state is ready for validation and shadow operation; it does not 
 - `docs/company-grafana-access.md` - read-only company-scoped Grafana access model.
 - `docs/managed-monitoring-v2-architecture.md` - v2 architecture, incident lifecycle, isolation and deployment boundaries.
 - `docs/managed-monitoring-v2-runbook.md` - staged validation, shadow, canary, cutover and rollback procedure.
+- `docs/deployments/con-shadow-2026-09-07.md` - applied shadow deployment record and current cutover blockers.
 - `services/incident-gateway/` - SQLite-backed Alertmanager-to-Telegram incident gateway.
 
 ## Runtime Notes
