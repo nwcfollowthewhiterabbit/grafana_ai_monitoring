@@ -1,8 +1,8 @@
 # Central monitoring migration to deployment — 2026-09-08
 
-Status: migration in progress. Do not infer live authority until the dated
-verification record at the end is completed. The source is `con`; the destination
-is `deployment` (169.58.132.8). Rabbit Platform already runs on the destination.
+Status: applied and verified live on 2026-09-08. The source was `con`; the sole
+central monitoring plane is now `deployment` (169.58.132.8), alongside Rabbit
+Platform. Source collectors and authenticated legacy ingress remain on `con`.
 
 ## Operating layout
 
@@ -92,8 +92,54 @@ remain available for rollback. No source volume or backup is deleted.
 
 ## Verification record
 
-Pending final cutover: record source stop proof; data integrity and lifecycle
-counts; destination release revision; gateway generation and readiness; scrape
-parity; scheduled checker success; Grafana customer organization isolation;
-legacy HTTPS/ingestion route checks; linked DOWN/Recovery canary; no orphan
-recoveries or unsent outbox; temporary transfer authorization removal.
+- Runtime release: `d95d22a3468df908b14b024bf0a1b20d53c03d39`; gateway image
+  `sha256:c7bd35125accc9838f907fe9ca4660d87147fd8d4b5f6476ec7de75f386c948e`
+  has that exact OCI source revision. Later catalog/docs changes do not change
+  the gateway artifact.
+- Full validator passed: 36 gateway tests, 30 repository tests, 10 Prometheus
+  evaluation fixtures, 29 dashboard JSON files, catalog and configuration checks.
+- Source Alertmanager stopped first; unsent outbox was zero before gateway stop.
+  Seven source central containers remain stopped with `restart=no`. OpenClaw
+  processing is still false; three source collector services and Promtail remain.
+- Final consistent copy contained 9,336,717,940 bytes. Source and destination
+  pre-upgrade SQLite checks both passed, preserving 37 incidents, 49 events,
+  two sent outbox rows and live generation 2. Isolated schema upgrade rehearsal
+  and production startup preserved that generation and upgraded to schema 2.
+- Nine destination monitoring services are running. Gateway, Alertmanager,
+  Prometheus, Grafana database and Loki are ready. Prometheus has 36 targets:
+  26 up, the same 10 previously down, plus the two new destination exporters.
+  `count(up offset 1d)` returned 32 historical series; a Loki count query one
+  hour before verification returned 1,741 historical log entries, without
+  reading message bodies.
+- Controlled canary incident 38 is resolved, with exactly one delivered DOWN
+  and one delivered resolution, each with a Telegram message ID. Final check:
+  26 accepted carryover incidents open, 12 resolved; two DOWN and two resolution
+  outbox rows sent in total; zero unsent rows and zero orphan resolutions.
+- Both Grafana organizations, three datasources and existing user hashes were
+  preserved. The encryption key was privately transferred with explicit owner
+  approval; old plaintext admin password was excluded. Startup reported no
+  decryption errors. Greenleaf proxy returns only `company=greenleaf`; a foreign
+  company selector is rejected with HTTP 400.
+- Existing public Grafana `/api/health` returns HTTP 200. Unauthenticated remote
+  write and Loki push still return 401. TLS and existing ingestion credentials
+  remain on the original Nginx route; no collector URLs were changed.
+- All three post-cutover checker services completed successfully: HTTP in 19s,
+  integrity in 27s, service events in 1s. Their timers are enabled on deployment;
+  their first scheduled destination triggers were still future at verification.
+  All checker/catalog metrics are scraped, including eight inventory servers.
+- The restored textfile directory is mode 0755. Nine pre-existing empty,
+  unreadable hidden checker `.prom` files on con were moved into the source
+  backup; its textfile parse error changed from 1 to 0. Nothing was deleted.
+- Temporary write-only rsync authorization was revoked (one exact new key).
+  Its private key was archived on con; the permanent restricted relay remains.
+
+Backups: source `/var/backups/rabbit-monitoring-v2/pre-deployment-20260908`,
+destination `/var/backups/rabbit-monitoring-v2/pre-cutover-20260908`, and transfer
+evidence `/var/lib/rabbit-monitoring-transfer/final-20260908`. Source storage is
+retained unchanged; review the rollback window before reclaiming its disk.
+
+The new canonical platform stack is `rabbit-platform` with platform, worker and
+database components. Old `rabbit-platform-dev` containers are stopped and are
+not managed runtime requirements. External watchdog, real subscription dates,
+fresh-evidence incident reconciliation and the ten existing failed scrape paths
+remain follow-up work; migration does not establish those missing signals.

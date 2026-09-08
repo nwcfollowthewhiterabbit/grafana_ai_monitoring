@@ -1,15 +1,15 @@
 # Managed Monitoring Roadmap
 
-This roadmap separates the deployed production baseline from operational remediation and future product work. The current deployment record is `docs/deployments/con-integrated-compose.md`.
+This roadmap separates the deployed production baseline from operational remediation and future product work. The current deployment record is `docs/deployments/deployment-production-2026-09-08.md`.
 
 ## Production baseline
 
 - Hierarchical service catalog: company → server → application → component.
-- Existing Prometheus, Grafana, Loki, Blackbox, node, cAdvisor and SNMP collection reused on `con`.
+- Existing Prometheus, Grafana, Loki and incident history migrated to `deployment`; `con` collectors, SNMP/VPN and legacy ingestion URLs retained through a private relay.
 - Alertmanager routing and inhibition integrated into the `monitoring` Compose project.
 - SQLite incident gateway with durable, idempotent DOWN → Recovery delivery to Telegram.
 - Legacy Grafana → OpenClaw alert processing paused and retained only as the rollback sender.
-- Admin Fleet → Server → Application dashboards in Grafana org 1.
+- Admin Fleet → Server → Application dashboards in Grafana org 1, with explicit UNKNOWN when telemetry is missing/stale.
 - Greenleaf customer dashboards in org 2 through a server-enforced `company=greenleaf` Prometheus proxy.
 - Frequent HTTP/TLS probes, queued retrying site checks, and independent page-integrity checks.
 - Service-event registry/exporter framework for domains, certificates, subscriptions and periodic actions.
@@ -54,7 +54,7 @@ This roadmap separates the deployed production baseline from operational remedia
 
 ## Deliberate non-goals
 
-- No duplicate Prometheus or Loki on the capacity-constrained monitoring host.
+- No competing central Prometheus/Loki or duplicate incident sender; old source containers are stopped with restart disabled.
 - No automatic discovery becoming managed inventory without review.
 - No golden-page comparison that breaks whenever normal website content changes.
 - No customer access to shared Loki data without enforceable tenant isolation.

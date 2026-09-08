@@ -1,5 +1,10 @@
 # con production deployment and rollback
 
+Historical record: superseded by `deployment-production-2026-09-08.md`. Central
+services and persisted state now run on `deployment`; old central containers on
+`con` are stopped with restart disabled. Its collectors, Nginx relay and paused
+OpenClaw remain active. The old procedures below are not current deployment commands.
+
 Status: applied to `con` on 2026-09-07 from commit `1e84d41` and verified live.
 
 This record describes how Alertmanager and the incident gateway moved from the isolated `rabbit-monitoring-v2-shadow` project into the existing `monitoring` project. The deployed layout reuses the same images, configuration, secret files and `/var/lib/rabbit-monitoring-v2` state. It did not recreate or redefine Prometheus, Grafana, Loki or any exporter.

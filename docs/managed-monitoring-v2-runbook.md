@@ -2,7 +2,7 @@
 
 This runbook documents the completed path from repository validation through shadow operation and live cutover, followed by current incident procedures. The preserved `/root/monitoring` base and legacy Grafana/OpenClaw route remain available for rollback.
 
-Current `con` status: phases 0–7 were completed on 2026-09-07. The production gateway is live in Compose project `monitoring`, and OpenClaw's legacy Grafana processing is paused. Do not repeat the rollout phases on the current host. Use `docs/deployments/con-integrated-compose.md` for the active file set and rollback commands; use the routine incident sections below for daily operation.
+Current status: the central plane and persisted data migrated to `deployment` on 2026-09-08. Use `docs/deployments/deployment-production-2026-09-08.md` for the active Compose file, private relay, verification and schema-aware rollback. The `con` phases below are historical; its central containers are stopped with restart disabled, while collectors, Nginx and paused OpenClaw remain. Do not repeat the old rollout/rollback commands against the current topology.
 
 ## Safety rules
 

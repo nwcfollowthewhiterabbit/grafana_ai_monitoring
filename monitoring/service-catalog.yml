@@ -640,8 +640,8 @@ companies:
               - {id: prom-label-proxy-greenleaf, service: prom-label-proxy-greenleaf, display_name: Greenleaf scoped query proxy, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: node-exporter-deployment, service: node-exporter-deployment, display_name: Node exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: cadvisor-deployment, service: cadvisor-deployment, display_name: cAdvisor, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-          - id: rabbit-platform-dev
-            stack: rabbit-platform-dev
+          - id: rabbit-platform
+            stack: rabbit-platform
             display_name: Rabbit Platform pilot
             status: active
             owners: *provider_owners

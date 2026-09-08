@@ -1,5 +1,9 @@
 # deployment shadow stage — 2026-09-07
 
+Historical stage, completed by `deployment-production-2026-09-08.md`: the central
+plane is now live on deployment. The isolated shadow containers are stopped and
+their state is retained in a separate backup.
+
 Status: applied and verified in shadow mode on `deployment` (`vmi3489272`).
 
 This record contains no credentials. It documents a reversible staging step;

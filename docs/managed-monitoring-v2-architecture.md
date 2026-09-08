@@ -1,6 +1,6 @@
 # Rabbit Systems Managed Monitoring v2
 
-Status: v2 is deployed on `con`. The existing Prometheus, Grafana, Loki and exporters are reused; Alertmanager and the SQLite incident gateway run in the existing `monitoring` Compose project. Live Telegram delivery is enabled through the gateway, and legacy Grafana processing in OpenClaw is paused but retained for rollback. The applied change record is in `docs/deployments/con-integrated-compose.md`.
+Status: the central v2 plane and existing Prometheus/Grafana/Loki/incident data migrated to `deployment` on 2026-09-08. Its incident gateway is the sole live sender. `con` retains collectors and private relay/legacy ingress; OpenClaw processing remains paused. The current applied record is `docs/deployments/deployment-production-2026-09-08.md`; the original `con` integration record is historical.
 
 ## Outcome
 
@@ -228,19 +228,19 @@ Future customers receive separate organizations and independently enforced label
 The deployed topology uses:
 
 - `/opt/rabbit-monitoring-v2` as the versioned checkout;
-- the existing Compose project and private network, both named `monitoring`;
-- `/root/monitoring/docker-compose.yml` as the preserved live base plus the common and live v2 layers from `deploy/`;
+- Compose project `monitoring` and the private external network `monitoring_default` on `deployment`;
+- `deploy/deployment-monitoring-compose.yml` with the reviewed gateway image and live mode selected by `/etc/rabbit-monitoring/release.env`;
 - loopback-only host publishing for Alertmanager and the incident gateway;
 - no Docker socket in the incident gateway;
 - the existing Prometheus as the sole rule evaluator and event source;
 - `/var/lib/rabbit-monitoring-v2` for the dedicated Alertmanager and incident state;
 - the OpenClaw Grafana-processing override while the gateway is the authoritative sender.
 
-The existing Prometheus, Grafana and Loki data under `/var/lib/monitoring` were not migrated or duplicated. The live Blackbox/Loki drift was preserved rather than overwritten. Never copy the repository wholesale onto `/root/monitoring`, and never operate the production Compose project with a partial file set plus `--remove-orphans`.
+The existing Prometheus, Grafana and Loki data under `/var/lib/monitoring` were transferred as a stopped-state snapshot. Source copies are retained for rollback and old central containers have restart disabled. Live Blackbox/Loki config and Grafana encrypted settings were preserved. Runtime config is `/etc/rabbit-monitoring`; the old `/root/monitoring` base on `con` must not restart central services accidentally.
 
 ## Capacity and drift constraints
 
-At cutover the root filesystem was 95% used. A follow-up live check on 2026-09-07 showed about 4.0 GiB free and `RootDiskLow` firing. A duplicate full-retention Prometheus/Loki would exceed available capacity. Before adding a second TSDB, expand storage or perform a separately approved, recoverable cleanup. Backups and Docker logs are large candidates for review, not automatic deletion targets.
+The old source `con` had 95% root usage and about 4 GiB free; its retained rollback data was not deleted. The selected destination had 371 GiB free and 44 GiB available RAM before migration. Central writes now run there. Backups and old source volumes remain reviewable cleanup candidates after a rollback window, not automatic deletion targets.
 
 Before any deployment, capture and reconcile:
 

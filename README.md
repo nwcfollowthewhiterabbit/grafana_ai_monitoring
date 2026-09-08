@@ -6,9 +6,10 @@ Managed monitoring for Rabbit Systems infrastructure and customer services.
 
 The repository contains the Managed Monitoring v2 implementation: hierarchical inventory and generated targets, operational admin/customer dashboards, Prometheus and Alertmanager rules, and a stateful SQLite incident gateway. The gateway is outbound-only to Telegram, persists incident transitions before responding, and enforces DOWN then Recovery ordering.
 
-The v2 Alertmanager/gateway pair was integrated into the existing `monitoring` Compose project on `con` and cut over to live delivery on 2026-09-07. OpenClaw remains the Telegram webhook owner, while its legacy Grafana notification processing is paused to prevent duplicate sends. See:
+The central monitoring services and their existing data moved from `con` to `deployment` on 2026-09-08. Prometheus, Grafana, Loki, Alertmanager and the sole live incident gateway run in project `monitoring`; local collectors on `con` use a private SSH relay. OpenClaw remains the Telegram webhook owner on `con`, with legacy Grafana notification processing paused. See:
 
-- `docs/deployments/con-integrated-compose.md` for the active production file set, verified state and rollback;
+- `docs/deployments/deployment-production-2026-09-08.md` for the active production layout, verification and rollback;
+- `docs/deployments/con-integrated-compose.md` for the historical first cutover on `con`;
 - `docs/managed-monitoring-v2-architecture.md` for the model, guarantees, audited baseline and boundaries;
 - `docs/managed-monitoring-v2-runbook.md` for validation, shadow deployment, canary, cutover and rollback;
 - `services/incident-gateway/README.md` for the implemented gateway contract.
@@ -41,25 +42,25 @@ OpenClaw → Telegram inbound webhook: ACTIVE
 | Concern | Production source of truth |
 | --- | --- |
 | Inventory hierarchy | `monitoring/service-catalog.yml` |
-| Health and alert evaluation | Prometheus on `con` |
-| Incident lifecycle and delivery | `/var/lib/rabbit-monitoring-v2/incident-gateway/incidents.db` |
+| Health and alert evaluation | Prometheus on `deployment` |
+| Incident lifecycle and delivery | `/var/lib/rabbit-monitoring-v2/incident-gateway/incidents.db` on `deployment` |
 | Admin UI | Grafana org 1 |
 | Greenleaf customer UI | Grafana org 2 through the enforced `company=greenleaf` proxy |
 | Notifications | Alertmanager → incident gateway → existing Telegram bot/topic |
-| Deployment | `/root/monitoring/docker-compose.yml` plus both `deploy/con-monitoring-v2.*.yml` layers |
-| Rollback | Restore OpenClaw Grafana processing only after returning the gateway to shadow |
+| Deployment | `deploy/deployment-monitoring-compose.yml` plus private `/etc/rabbit-monitoring/release.env` |
+| Rollback | Stop destination sender; reconcile latest state and the matching schema/image before restoring a source sender |
 
-The current deployment and verification evidence are recorded in `docs/deployments/con-integrated-compose.md`. `deploy/con-shadow-compose.yml` is retained only as rollout history and an isolated rollback/test layout; it is not the active production project.
+The current deployment and verification evidence are recorded in `docs/deployments/deployment-production-2026-09-08.md`. The shadow and old `con` central containers are stopped; their data remains available for rollback. The original Grafana URL and authenticated collector ingestion URLs continue through Nginx on `con` and the private relay.
 
 ## Managed inventory
 
-The validated catalog currently contains 3 companies, 7 servers, 41 applications, 67 components and 13 public HTTP services.
+The validated catalog currently contains 3 companies, 8 servers, 43 applications, 72 components and 13 public HTTP services.
 
 | Company ID | Server IDs |
 | --- | --- |
 | greenleaf | cloud, testing, new |
 | rentall | payroll, howbot |
-| my-own | test, con |
+| my-own | test, con, deployment |
 
 ## Files
 
@@ -72,7 +73,7 @@ The validated catalog currently contains 3 companies, 7 servers, 41 applications
 - `monitoring/promtail/config.template.yml` - Docker log collection template for client nodes.
 - `monitoring/grafana/provisioning/dashboards/` - Grafana dashboard provisioning.
 - `monitoring/grafana/provisioning/datasources/` - Grafana datasource provisioning.
-- `monitoring/docker-compose.yml` - repository full-stack Compose reference; the drift-preserving live `con` base is `/root/monitoring/docker-compose.yml` plus the two v2 deployment layers.
+- `monitoring/docker-compose.yml` - historical full-stack reference; production now uses `deploy/deployment-monitoring-compose.yml`.
 - `scripts/cloud-backup-metrics.sh` - `cloud` backup health exporter for node_exporter textfile collection.
 - `scripts/cloud-run-daily-backups.sh` - corrected `cloud` daily backup wrapper for all non-ERP stacks.
 - `scripts/scheduled-public-site-checker.py` - queued, retrying public HTTP checker that provides independent supporting evidence; production `PublicSiteDown` is evaluated from sustained Blackbox failures.
@@ -88,10 +89,12 @@ The validated catalog currently contains 3 companies, 7 servers, 41 applications
 - `docs/managed-monitoring-v2-architecture.md` - v2 architecture, incident lifecycle, isolation and deployment boundaries.
 - `docs/managed-monitoring-v2-runbook.md` - staged validation, shadow, canary, cutover and rollback procedure.
 - `docs/deployments/con-shadow-2026-09-07.md` - historical shadow deployment and findings carried into cutover.
-- `docs/deployments/con-integrated-compose.md` - current production file set, applied migration evidence and rollback.
-- `docs/deployments/deployment-shadow-2026-09-07.md` - isolated, credential-free shadow stage on the future deployment host; production routing remains on `con`.
-- `deploy/con-monitoring-v2.override.yml` - shadow-by-default integrated Alertmanager/gateway override; no build or existing-service definitions.
-- `deploy/con-monitoring-v2.live.yml` - mandatory final layer for live gateway delivery; omitting it returns the gateway to shadow mode.
+- `docs/deployments/con-integrated-compose.md` - historical `con` integration and original rollback evidence.
+- `docs/deployments/deployment-production-2026-09-08.md` - current central deployment, private relay, persisted data and verification.
+- `docs/deployments/deployment-shadow-2026-09-07.md` - historical credential-free staging before the completed migration.
+- `scripts/render-deployment-monitoring.py` - deployment scrape transport with preserved exporter instance identities.
+- `deploy/con-monitoring-v2.override.yml` - historical con Alertmanager/gateway override; its service definitions are also reused by the new deployment Compose.
+- `deploy/con-monitoring-v2.live.yml` - historical con live layer; active deployment selects live mode through its private `release.env`.
 - `deploy/openclaw-grafana-paused.override.yml` - required OpenClaw API layer for as long as the gateway is authoritative; omitting it re-enables the legacy sender.
 - `services/incident-gateway/` - SQLite-backed Alertmanager-to-Telegram incident gateway.
 
@@ -119,9 +122,9 @@ The validated catalog currently contains 3 companies, 7 servers, 41 applications
   does not compare normal content with a saved page.
 - `test` is behind NAT and is monitored through a reverse SSH tunnel:
   `test:127.0.0.1:9100 -> con:172.17.0.1:19100`.
-- `con` is monitored locally through compose services `node-exporter-con`
-  and `cadvisor-con`; its Docker stack metrics are exported through the
-  node_exporter textfile collector.
+- `con` retains compose services `node-exporter-con` and `cadvisor-con`; the
+  central Prometheus on `deployment` reaches them through the private relay.
+  Both hosts publish local Docker stack metrics through node_exporter textfiles.
 - `new` is currently configured in Prometheus but remains down until `node_exporter`
   is installed/listening on `139.99.171.55:9100` and the host is reachable.
 - Grafana-managed alert rules are provisioned in
@@ -131,64 +134,28 @@ The validated catalog currently contains 3 companies, 7 servers, 41 applications
 
 ## Apply
 
-On `con`, Prometheus reads:
+Run central operations on `deployment`, using the reviewed source checkout at
+`/opt/rabbit-monitoring-v2`. The runtime configuration is `/etc/rabbit-monitoring`.
 
-```bash
-/root/monitoring/prometheus/prometheus.yml
+```sh
+docker compose --env-file /etc/rabbit-monitoring/release.env \
+  -f /opt/rabbit-monitoring-v2/deploy/deployment-monitoring-compose.yml ps
 ```
 
-Live Compose operations must retain the integrated file set:
+Use the same prefix with an explicit service for changes. The release file pins
+the reviewed gateway image and `live` mode. After config/dashboard updates:
 
-```bash
-docker compose --project-name monitoring --project-directory /root/monitoring \
-  -f /root/monitoring/docker-compose.yml \
-  -f /opt/rabbit-monitoring-v2/deploy/con-monitoring-v2.override.yml \
-  -f /opt/rabbit-monitoring-v2/deploy/con-monitoring-v2.live.yml
-```
-
-See `docs/deployments/con-integrated-compose.md` before recreating Alertmanager, the gateway or the whole project. Do not use the base file alone with `--remove-orphans`.
-
-OpenClaw has a separate but equally important invariant: while the gateway is
-live, every OpenClaw API recreate must layer
-`deploy/openclaw-grafana-paused.override.yml` over `/opt/helper/docker-compose.yml`.
-A base-only recreate re-enables the legacy Grafana sender and can duplicate
-Telegram notifications.
-
-Grafana reads provisioning from:
-
-```bash
-/root/monitoring/grafana/provisioning
-```
-
-After changing Prometheus config:
-
-```bash
+```sh
+python3 /opt/rabbit-monitoring-v2/scripts/render-deployment-monitoring.py
 docker exec monitoring-prometheus promtool check config /etc/prometheus/prometheus.yml
 docker kill --signal HUP monitoring-prometheus
 ```
 
-The same validated HUP reload applies after changing an already-mounted alert
-rule. If a Compose mount or service definition itself changes, recreate only the
-affected service with the complete production file set:
+Regenerate catalog textfiles with `systemctl start service-event-metrics.service`.
+Checker timers run on `deployment`. Keep `/var/lib/node-exporter-textfile` mode
+0755 and completed `.prom` files readable by node-exporter.
 
-```bash
-docker compose --project-name monitoring --project-directory /root/monitoring \
-  -f /root/monitoring/docker-compose.yml \
-  -f /opt/rabbit-monitoring-v2/deploy/con-monitoring-v2.override.yml \
-  -f /opt/rabbit-monitoring-v2/deploy/con-monitoring-v2.live.yml \
-  up -d prometheus
-```
-
-After changing the scheduled public site checker:
-
-```bash
-sudo systemctl daemon-reload
-sudo systemctl restart scheduled-public-site-checker.service
-sudo systemctl enable --now scheduled-public-site-checker.timer
-```
-
-After changing dashboard provisioning:
-
-```bash
-docker restart monitoring-grafana
-```
+See the current deployment record before image/database upgrades or rollback.
+Do not restart the stopped central stack on `con`. OpenClaw API changes there
+must still include `deploy/openclaw-grafana-paused.override.yml` over
+`/opt/helper/docker-compose.yml`; only the gateway owns live monitoring delivery.

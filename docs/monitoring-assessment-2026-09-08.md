@@ -24,7 +24,7 @@ Deployment/migration evidence lives in `docs/deployments/`, not in this review.
 - Site resource checks follow the final redirect/base URL, prioritize CSS/JS and
   detect HTTP200 HTML fallback responses masquerading as assets. Normal content
   changes still do not require a visual baseline.
-- Local gateway tests:32 passed. Catalog/checker/compose unit tests:27 passed.
+- Final gateway tests:36 passed. Catalog/checker/compose/transport unit tests:30 passed.
   Ten fixtures passed in the actual pinned Prometheus3.4 evaluator, including
   telemetry loss, stale data, missing services, duplicates and tenant isolation.
 
