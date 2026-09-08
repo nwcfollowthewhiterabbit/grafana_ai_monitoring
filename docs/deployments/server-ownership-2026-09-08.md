@@ -61,9 +61,22 @@ with similarly named hosts.
   was unavailable on the host; the authoritative Prometheus API count above was
   verified separately, without repeating the apply.
 
-The owner's subsequent name clarification changes display metadata from HOW
-to **HOW Production**; metric IDs/labels remain `rentall`. Live application of
-that display-only follow-up is recorded after verification.
+The owner's subsequent display-only clarification to **HOW Production** was
+applied by clean fast-forward from `f0d4a26` to
+`82bc51f6db091aff7db19c0693c935c2eb5dcb3a`. Catalog readback confirms the name;
+metric IDs/labels remain `rentall`. Remote strict validation, all six ownership
+tests and HTTP renderer `--check` passed with `PYTHONDONTWRITEBYTECODE=1`.
+The existing service-event generator exited 0 at `2026-09-08T20:02:00Z`;
+textfile mode remained `0644`, and the checkout remained clean. Prometheus
+readback at `2026-09-08T20:02:38Z` confirmed 12 inventory servers, the same four
+UNKNOWN hosts, catalog-valid=1 and 36 scrape targets with the identical SHA-256
+above. No broader renderer, monitoring restart, scrape, ACL or history change
+was performed. The sole previously generated
+`scripts/__pycache__/monitoring_catalog.cpython-312.pyc` was recoverably moved
+with its directory into the existing `0700` backup directory as
+`scripts-pycache-before-display-followup`; nothing was deleted. The catalog
+before this follow-up was also retained there as
+`service-catalog.before-display-followup.yml`.
 
 ## Bounded application
 
