@@ -127,7 +127,7 @@ class WorkerTests(unittest.TestCase):
             self.assertTrue(worker.run_once(now=133.0))
             self.assertIn("DOWN", fake.calls[0][0])
             self.assertIn("DOWN", fake.calls[1][0])
-            self.assertIn("RECOVERY", fake.calls[2][0])
+            self.assertIn("ALERT RESOLVED", fake.calls[2][0])
             states = [(row["kind"], row["state"]) for row in store.fetch_all("notification_outbox")]
             self.assertEqual(states, [("down", "sent"), ("recovery", "sent")])
 
