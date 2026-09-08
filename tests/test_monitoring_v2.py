@@ -51,7 +51,11 @@ class CatalogTests(unittest.TestCase):
 		con = next(server for server in internal["servers"] if server["id"] == "con")
 		applications = {application["id"]: application for application in con["applications"]}
 		self.assertEqual(applications["openclaw-stack"]["status"], "active")
-		monitoring = {component["id"]: component for component in applications["monitoring"]["components"]}
+		retained = {component["id"] for component in applications["monitoring"]["components"]}
+		self.assertEqual(retained, {"node-exporter-con", "cadvisor-con", "snmp-exporter"})
+		deployment = next(server for server in internal["servers"] if server["id"] == "deployment")
+		central = next(application for application in deployment["applications"] if application["id"] == "monitoring")
+		monitoring = {component["id"]: component for component in central["components"]}
 		self.assertTrue(monitoring["prometheus"]["expected"])
 		self.assertTrue(monitoring["alertmanager"]["expected"])
 		self.assertTrue(monitoring["incident-gateway"]["expected"])
