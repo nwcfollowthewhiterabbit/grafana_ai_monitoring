@@ -103,6 +103,17 @@ while IFS= read -r -d '' rule_file; do
     "$prometheus_image" check rules /work/rules.yml
 done < <(find "$repository_root/monitoring/prometheus/rules" -type f -name '*.yml' -print0)
 
+# Syntax checks cannot prove the value of a status when telemetry disappears.
+# Run fixtures through the actual pinned Prometheus evaluator as well.
+while IFS= read -r -d '' rule_test; do
+  docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=128m --cap-drop ALL \
+    --security-opt no-new-privileges \
+    --entrypoint /bin/promtool \
+    --workdir /work/tests \
+    -v "$repository_root:/work:ro" \
+    "$prometheus_image" test rules "/work/${rule_test#./}"
+done < <(find ./tests -type f -name '*.test.yml' -print0)
+
 docker run --rm --network none --read-only --cap-drop ALL \
   --security-opt no-new-privileges \
   --entrypoint /bin/amtool \

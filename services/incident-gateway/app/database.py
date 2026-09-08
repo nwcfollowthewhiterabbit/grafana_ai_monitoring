@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import dataclass
 import hashlib
 import json
@@ -10,6 +11,8 @@ from typing import Any, Iterable
 
 from .domain import Alert, notification_text
 
+
+SCHEMA_VERSION = 2
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS gateway_state (
@@ -88,7 +91,14 @@ CREATE TABLE IF NOT EXISTS notification_outbox (
 CREATE INDEX IF NOT EXISTS notification_outbox_due
 ON notification_outbox(state, mode_generation, next_attempt_at, id);
 
-PRAGMA user_version = 1;
+CREATE INDEX IF NOT EXISTS incident_events_fingerprint_transition
+ON incident_events(fingerprint, transition);
+
+CREATE TABLE IF NOT EXISTS telegram_delivery_state (
+    singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
+    blocked_until REAL NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO telegram_delivery_state(singleton, blocked_until) VALUES (1, 0);
 """
 
 
@@ -136,8 +146,22 @@ class IncidentStore:
         self.mode = mode
         if path != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
-        with self._connect() as connection:
-            connection.executescript(SCHEMA)
+        with closing(self._connect()) as connection:
+            version = int(connection.execute("PRAGMA user_version").fetchone()[0])
+            if version > SCHEMA_VERSION:
+                raise RuntimeError(
+                    f"database schema {version} is newer than supported schema {SCHEMA_VERSION}"
+                )
+            try:
+                # Version 2 adds only an index and shared delivery cooldown state.
+                # Existing incidents, immutable events, and outbox rows are retained.
+                connection.executescript(
+                    "BEGIN IMMEDIATE;\n" + SCHEMA
+                    + f"\nPRAGMA user_version = {SCHEMA_VERSION};\nCOMMIT;"
+                )
+            except Exception:
+                connection.rollback()
+                raise
         self._activate_mode(mode)
 
     def _connect(self) -> sqlite3.Connection:
@@ -248,6 +272,11 @@ class IncidentStore:
         generation: int,
         counts: dict[str, int],
     ) -> None:
+        if self._occurrence_was_resolved(connection, alert):
+            # Alertmanager retries may arrive after a later incident, or after
+            # an orphan Recovery. Neither can turn old evidence into a new DOWN.
+            counts["repeated"] += 1
+            return
         incident = connection.execute(
             "SELECT * FROM incidents WHERE fingerprint = ? AND state = 'open'",
             (alert.fingerprint,),
@@ -258,20 +287,6 @@ class IncidentStore:
                 "WHERE id = ?",
                 (now, _json(alert.labels), _json(alert.annotations), incident["id"]),
             )
-            counts["repeated"] += 1
-            return
-
-        latest = connection.execute(
-            "SELECT * FROM incidents WHERE fingerprint = ? ORDER BY id DESC LIMIT 1",
-            (alert.fingerprint,),
-        ).fetchone()
-        if (
-            latest is not None
-            and latest["state"] == "resolved"
-            and alert.starts_at
-            and latest["starts_at"] == alert.starts_at
-        ):
-            # A delayed Alertmanager retry must not reopen a completed occurrence.
             counts["repeated"] += 1
             return
 
@@ -320,6 +335,28 @@ class IncidentStore:
                 ),
             )
             counts["notifications_queued"] += 1
+
+    @staticmethod
+    def _occurrence_was_resolved(connection: sqlite3.Connection, alert: Alert) -> bool:
+        if not alert.starts_at:
+            # Without startsAt we cannot distinguish a replay from a fresh outage.
+            return False
+        resolved = connection.execute(
+            "SELECT 1 FROM incidents WHERE fingerprint = ? AND starts_at = ? "
+            "AND state = 'resolved' LIMIT 1",
+            (alert.fingerprint, alert.starts_at),
+        ).fetchone()
+        if resolved is not None:
+            return True
+        orphan_events = connection.execute(
+            "SELECT payload_json FROM incident_events "
+            "WHERE fingerprint = ? AND transition = 'orphan_resolved'",
+            (alert.fingerprint,),
+        )
+        return any(
+            json.loads(event["payload_json"]).get("startsAt") == alert.starts_at
+            for event in orphan_events
+        )
 
     def _ingest_resolved(
         self,
@@ -498,6 +535,12 @@ class IncidentStore:
                 connection.commit()
                 return None
             generation = int(mode["mode_generation"])
+            delivery = connection.execute(
+                "SELECT blocked_until FROM telegram_delivery_state WHERE singleton = 1"
+            ).fetchone()
+            if delivery is not None and float(delivery["blocked_until"]) > timestamp:
+                connection.commit()
+                return None
             connection.execute(
                 "UPDATE notification_outbox SET state = 'retry', lease_until = NULL, "
                 "next_attempt_at = ? WHERE state = 'sending' AND lease_until <= ? "
@@ -547,8 +590,9 @@ class IncidentStore:
             connection.execute("BEGIN IMMEDIATE")
             updated = connection.execute(
                 "UPDATE notification_outbox SET state = 'sent', sent_at = ?, lease_until = NULL, "
-                "last_error = NULL, telegram_message_id = ? WHERE id = ? AND state = 'sending'",
-                (now, message_id, item.id),
+                "last_error = NULL, telegram_message_id = ? "
+                "WHERE id = ? AND state = 'sending' AND attempts = ?",
+                (now, message_id, item.id, item.attempts),
             )
             if updated.rowcount:
                 column = "down_sent_at" if item.kind == "down" else "recovery_sent_at"
@@ -570,15 +614,28 @@ class IncidentStore:
         finally:
             connection.close()
 
-    def mark_retry(self, item: OutboxItem, error: str, next_attempt_at: float) -> bool:
+    def mark_retry(
+        self,
+        item: OutboxItem,
+        error: str,
+        next_attempt_at: float,
+        blocked_until: float | None = None,
+    ) -> bool:
         connection = self._connect()
         try:
             connection.execute("BEGIN IMMEDIATE")
             updated = connection.execute(
                 "UPDATE notification_outbox SET state = 'retry', next_attempt_at = ?, "
-                "lease_until = NULL, last_error = ? WHERE id = ? AND state = 'sending'",
-                (next_attempt_at, error[:500], item.id),
+                "lease_until = NULL, last_error = ? "
+                "WHERE id = ? AND state = 'sending' AND attempts = ?",
+                (next_attempt_at, error[:500], item.id, item.attempts),
             )
+            if updated.rowcount and blocked_until is not None:
+                connection.execute(
+                    "UPDATE telegram_delivery_state SET blocked_until = MAX(blocked_until, ?) "
+                    "WHERE singleton = 1",
+                    (blocked_until,),
+                )
             connection.commit()
             return updated.rowcount == 1
         except Exception:
@@ -589,7 +646,7 @@ class IncidentStore:
 
     def health(self) -> tuple[bool, str]:
         try:
-            with self._connect() as connection:
+            with closing(self._connect()) as connection:
                 result = connection.execute("SELECT mode FROM gateway_state WHERE singleton = 1").fetchone()
             if result is None or result["mode"] != self.mode:
                 return False, "mode_state_mismatch"
@@ -598,7 +655,7 @@ class IncidentStore:
             return False, type(exc).__name__
 
     def metrics(self, worker_up: bool, ready: bool) -> str:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             mode = connection.execute(
                 "SELECT mode, mode_generation FROM gateway_state WHERE singleton = 1"
             ).fetchone()
@@ -617,6 +674,9 @@ class IncidentStore:
             attempts = connection.execute(
                 "SELECT COALESCE(SUM(attempts), 0) AS count FROM notification_outbox"
             ).fetchone()["count"]
+            blocked_until = connection.execute(
+                "SELECT blocked_until FROM telegram_delivery_state WHERE singleton = 1"
+            ).fetchone()["blocked_until"]
         mode_name = str(mode["mode"]) if mode else "unknown"
         generation = int(mode["mode_generation"]) if mode else 0
         lines = [
@@ -703,6 +763,9 @@ class IncidentStore:
                 "# HELP incident_gateway_telegram_attempts_total Durable Telegram send attempts.",
                 "# TYPE incident_gateway_telegram_attempts_total counter",
                 f"incident_gateway_telegram_attempts_total {int(attempts)}",
+                "# HELP incident_gateway_telegram_blocked_until_seconds Shared Telegram retry-after deadline (Unix time).",
+                "# TYPE incident_gateway_telegram_blocked_until_seconds gauge",
+                f"incident_gateway_telegram_blocked_until_seconds {float(blocked_until):.3f}",
             ]
         )
         return "\n".join(lines) + "\n"
@@ -710,5 +773,5 @@ class IncidentStore:
     def fetch_all(self, table: str) -> list[sqlite3.Row]:
         if table not in {"gateway_state", "incidents", "incident_events", "notification_outbox"}:
             raise ValueError("unsupported table")
-        with self._connect() as connection:
+        with closing(self._connect()) as connection:
             return connection.execute(f"SELECT * FROM {table} ORDER BY rowid").fetchall()

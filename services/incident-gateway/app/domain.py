@@ -85,8 +85,7 @@ def _first(mapping: dict[str, str], *keys: str, default: str = "") -> str:
 def notification_text(alert: Alert, kind: str, incident_id: int) -> tuple[str, str]:
     labels = alert.labels
     annotations = alert.annotations
-    title = "DOWN" if kind == "down" else "RECOVERY"
-    marker = "ALERT" if kind == "down" else "OK"
+    title = "DOWN" if kind == "down" else "ALERT RESOLVED"
     summary = _first(
         annotations,
         "summary",
@@ -100,8 +99,20 @@ def notification_text(alert: Alert, kind: str, incident_id: int) -> tuple[str, s
         ("Component", _first(labels, "component", "service", "container")),
         ("Severity", _first(labels, "severity", "priority")),
     ]
-    plain_lines = [f"{marker} {title}", summary]
-    html_lines = [f"<b>{title}</b>", html.escape(summary)]
+    plain_lines = [f"ALERT {title}" if kind == "down" else title]
+    html_lines = [f"<b>{title}</b>"]
+    if kind != "down":
+        # Alertmanager resolution can follow lost/stale telemetry. Keep the
+        # lifecycle transition without claiming independently verified recovery.
+        notice = (
+            "Prometheus no longer reports this alert as firing. "
+            "Service recovery is not independently verified; check current telemetry."
+        )
+        plain_lines.append(notice)
+        html_lines.append(html.escape(notice))
+        summary = "Previous alert: " + summary
+    plain_lines.append(summary)
+    html_lines.append(html.escape(summary))
     for label, value in fields:
         if value:
             plain_lines.append(f"{label}: {value}")

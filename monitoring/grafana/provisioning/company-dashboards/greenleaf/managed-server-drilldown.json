@@ -66,7 +66,7 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Server up",
+      "title": "Host telemetry",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -83,13 +83,49 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "UNREACHABLE",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "REACHABLE",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "green",
@@ -97,9 +133,7 @@
               }
             ]
           },
-          "unit": "short",
-          "min": 0,
-          "max": 1
+          "unit": "short"
         },
         "overrides": []
       },
@@ -125,7 +159,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max(rs_monitoring_server_up{company=~\"$company\",alias=~\"$server\"})",
+          "expr": "min(rs_monitoring_server_status{company=~\"$company\",alias=~\"$server\"})",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -137,7 +171,7 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Unhealthy applications",
+      "title": "Apps stopped / missing",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -154,7 +188,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -194,7 +250,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "count(rs_monitoring_application_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"} == 0) or vector(0)",
+          "expr": "count(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} == 0) or (0 * count(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}))",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -206,7 +262,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Running components",
+      "title": "Apps UNKNOWN",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -223,13 +279,39 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
                 "color": "green",
                 "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 1
               }
             ]
           },
@@ -259,7 +341,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(rs_monitoring_component_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or vector(0)",
+          "expr": "count(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} < 0) or (0 * count(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}))",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -288,7 +370,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -334,7 +438,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max(100 * rs_monitoring_server_memory_utilization_ratio{company=~\"$company\",alias=~\"$server\"}) or max(100 * (1 - node_memory_MemAvailable_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$server\"} / node_memory_MemTotal_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$server\"}))",
+          "expr": "max(100 * rs_monitoring_server_memory_utilization_ratio{company=~\"$company\",alias=~\"$server\"})",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -363,7 +467,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -409,7 +535,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "min(100 * rs_monitoring_server_root_disk_free_ratio{company=~\"$company\",alias=~\"$server\"}) or min(100 * node_filesystem_avail_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$server\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"node_exporter_clients\",company=~\"$company\",alias=~\"$server\",mountpoint=\"/\",fstype!~\"tmpfs|overlay|squashfs\"})",
+          "expr": "min(100 * rs_monitoring_server_root_disk_free_ratio{company=~\"$company\",alias=~\"$server\"})",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -438,7 +564,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -478,7 +626,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(rs_monitoring_open_incident{company=~\"$company\",alias=~\"$server\",state=\"open\"}) or vector(0)",
+          "expr": "(sum(rs_monitoring_open_incident{company=~\"$company\",alias=~\"$server\",state=\"open\"}) or (0 * (max(rs_monitoring_incident_pipeline_available{company=~\"$company\"}) == 1))) and on () (max(rs_monitoring_incident_pipeline_available{company=~\"$company\"}) == 1)",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -490,7 +638,7 @@
     {
       "id": 8,
       "type": "table",
-      "title": "Applications on server",
+      "title": "Application runtime on server",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -507,13 +655,53 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "STOPPED / MISSING",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "RUNNING",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -547,7 +735,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rs_monitoring_application_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}",
+          "expr": "rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "{{stack}}",
@@ -560,8 +748,8 @@
     {
       "id": 9,
       "type": "table",
-      "title": "Components on server",
-      "description": "Expected catalog components observed in the runtime; 1=running.",
+      "title": "Expected components on server",
+      "description": "One row per expected service, including missing containers. UNKNOWN when inventory is unavailable or older than 15 minutes.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -577,13 +765,53 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "STOPPED / MISSING",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "RUNNING",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -610,10 +838,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"})",
+          "expr": "rs_monitoring_component_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "table",
           "instant": true,
-          "legendFormat": "{{stack}} / {{service}} / {{container}}",
+          "legendFormat": "{{stack}} / {{service}}",
           "range": false,
           "refId": "A"
         }
@@ -624,7 +852,7 @@
       "id": 10,
       "type": "timeseries",
       "title": "CPU by application",
-      "description": "",
+      "description": "Sum across containers; duplicate scrape series are deduplicated. CPU can exceed 100% across cores. Stale inventory creates a gap.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -661,7 +889,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -706,7 +934,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack) (rs_monitoring_application_cpu_percent{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or sum by (company,alias,stack) (docker_stack_container_cpu_percent{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "expr": "rs_monitoring_application_cpu_percent{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{stack}}",
@@ -756,7 +984,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -801,7 +1029,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack) (rs_monitoring_application_memory_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or sum by (company,alias,stack) (docker_stack_container_memory_usage_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\",state=\"running\"})",
+          "expr": "rs_monitoring_application_memory_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{stack}}",
@@ -814,7 +1042,7 @@
       "id": 12,
       "type": "timeseries",
       "title": "Network rate by application",
-      "description": "Fallback derives rates from cumulative Docker exporter values over 15 minutes.",
+      "description": "Rates estimated over 15 minutes from Docker cumulative display values; inventory must be fresh.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -851,7 +1079,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -896,7 +1124,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack) (rs_monitoring_application_network_rx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_net_rx_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_application_network_rx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{stack}} RX",
@@ -909,7 +1137,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack) (rs_monitoring_application_network_tx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_net_tx_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_application_network_tx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{stack}} TX",
@@ -959,7 +1187,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1004,7 +1232,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack) (rs_monitoring_application_block_read_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_block_read_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_application_block_read_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{stack}} read",
@@ -1017,7 +1245,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack) (rs_monitoring_application_block_write_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\"}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_block_write_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",stack!~\"monitoring.*|node-exporter\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_application_block_write_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{stack}} write",
@@ -1046,7 +1274,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -1144,9 +1394,9 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(rs_monitoring_server_inventory_info{company=~\"$company\",server_status=\"active\"}, alias)",
+        "definition": "label_values(rs_monitoring_server_status{company=~\"$company\"}, alias)",
         "query": {
-          "query": "label_values(rs_monitoring_server_inventory_info{company=~\"$company\",server_status=\"active\"}, alias)",
+          "query": "label_values(rs_monitoring_server_status{company=~\"$company\"}, alias)",
           "refId": "var-server"
         },
         "refresh": 1,
@@ -1164,9 +1414,9 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(rs_monitoring_application_inventory_info{company=~\"$company\",alias=~\"$server\",application_status=\"active\"}, stack)",
+        "definition": "label_values(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\"}, stack)",
         "query": {
-          "query": "label_values(rs_monitoring_application_inventory_info{company=~\"$company\",alias=~\"$server\",application_status=\"active\"}, stack)",
+          "query": "label_values(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\"}, stack)",
           "refId": "var-application"
         },
         "refresh": 1,

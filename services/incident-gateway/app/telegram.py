@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import json
+import math
 from typing import Any
 import urllib.error
 import urllib.request
@@ -91,7 +92,9 @@ class TelegramClient:
         parameters = data.get("parameters")
         if isinstance(parameters, dict) and parameters.get("retry_after") is not None:
             try:
-                retry_after = max(0.0, float(parameters["retry_after"]))
+                candidate = float(parameters["retry_after"])
+                if math.isfinite(candidate) and candidate >= 0:
+                    retry_after = candidate
             except (TypeError, ValueError):
                 retry_after = None
         if not 200 <= status_code < 300 or data.get("ok") is not True:

@@ -54,14 +54,23 @@ class OutboxWorker:
         except Exception as exc:  # defensive: an outbox item must never be lost
             error = type(exc).__name__
             delay = self._retry_delay(item.attempts, None)
-            self.store.mark_retry(item, error, timestamp + delay)
+            completed_at = time.time() if now is None else timestamp
+            self.store.mark_retry(item, error, completed_at + delay)
             logger.warning("telegram send raised; incident=%s kind=%s", item.incident_id, item.kind)
             return True
+        # A retry-after interval starts when Telegram responds, not before the
+        # possibly slow request. Explicit now is a deterministic test clock.
+        completed_at = time.time() if now is None else timestamp
         if result.ok:
-            self.store.mark_sent(item, result.message_id, timestamp)
+            self.store.mark_sent(item, result.message_id, completed_at)
             return True
         delay = self._retry_delay(item.attempts, result.retry_after)
-        self.store.mark_retry(item, result.error or "telegram_send_failed", timestamp + delay)
+        self.store.mark_retry(
+            item,
+            result.error or "telegram_send_failed",
+            completed_at + delay,
+            blocked_until=completed_at + delay if result.retry_after is not None else None,
+        )
         logger.warning(
             "telegram send failed; incident=%s kind=%s retry_in=%.1fs",
             item.incident_id,

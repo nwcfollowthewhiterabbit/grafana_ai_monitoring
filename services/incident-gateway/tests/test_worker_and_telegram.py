@@ -50,6 +50,57 @@ class FakeResponse:
 
 
 class WorkerTests(unittest.TestCase):
+    def test_rate_limit_pauses_all_messages_and_survives_worker_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = IncidentStore(str(Path(directory) / "gateway.db"), "live")
+            for fingerprint in ("first", "second"):
+                store.ingest(
+                    parse_alertmanager_payload(payload("firing", fingerprint=fingerprint)),
+                    received_at=100.0,
+                )
+            settings = Settings(database_path=store.path, mode="live")
+            rate_limited = FakeTelegram(
+                [SendResult(ok=False, error="Too Many Requests", retry_after=30.0)]
+            )
+            worker = OutboxWorker(store, rate_limited, settings)
+            # A slow request receives retry-after at t=110, so every message
+            # must wait until t=140, not t=130 when measured from request start.
+            with patch("app.worker.time") as clock:
+                clock.time.side_effect = [100.0, 110.0]
+                self.assertTrue(worker.run_once())
+
+            restarted_store = IncidentStore(store.path, "live")
+            ready_telegram = FakeTelegram([SendResult(ok=True, message_id="1")])
+            restarted = OutboxWorker(restarted_store, ready_telegram, settings)
+            self.assertFalse(restarted.run_once(now=130.0))
+            self.assertFalse(restarted.run_once(now=139.0))
+            self.assertEqual(ready_telegram.calls, [])
+            self.assertTrue(restarted.run_once(now=140.0))
+            self.assertIn(
+                "incident_gateway_telegram_blocked_until_seconds 140.000",
+                restarted_store.metrics(worker_up=True, ready=True),
+            )
+
+    def test_network_retry_does_not_block_other_incidents(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = IncidentStore(str(Path(directory) / "gateway.db"), "live")
+            for fingerprint in ("first", "second"):
+                store.ingest(
+                    parse_alertmanager_payload(payload("firing", fingerprint=fingerprint)),
+                    received_at=100.0,
+                )
+            fake = FakeTelegram(
+                [SendResult(ok=False, error="TimeoutError"), SendResult(ok=True, message_id="2")]
+            )
+            worker = OutboxWorker(store, fake, Settings(database_path=store.path, mode="live"))
+            self.assertTrue(worker.run_once(now=100.0))
+            self.assertTrue(worker.run_once(now=100.0))
+            self.assertEqual(len(fake.calls), 2)
+            self.assertEqual(
+                [row["state"] for row in store.fetch_all("notification_outbox")],
+                ["retry", "sent"],
+            )
+
     def test_retry_after_is_honored_then_down_precedes_recovery(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = IncidentStore(str(Path(directory) / "gateway.db"), "live")
@@ -82,6 +133,22 @@ class WorkerTests(unittest.TestCase):
 
 
 class TelegramTests(unittest.TestCase):
+    def test_invalid_retry_after_cannot_freeze_the_queue(self) -> None:
+        for invalid in ("Infinity", "NaN", -1, "not-a-number"):
+            with self.subTest(retry_after=invalid):
+                result = TelegramClient._decode(
+                    json.dumps(
+                        {
+                            "ok": False,
+                            "description": "Too Many Requests",
+                            "parameters": {"retry_after": invalid},
+                        }
+                    ).encode("utf-8"),
+                    429,
+                )
+                self.assertFalse(result.ok)
+                self.assertIsNone(result.retry_after)
+
     def test_api_ok_false_is_failure(self) -> None:
         response = FakeResponse({"ok": False, "description": "chat not found"})
         with patch("urllib.request.urlopen", return_value=response):

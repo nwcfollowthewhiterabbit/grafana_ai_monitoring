@@ -134,6 +134,100 @@ class IncidentStoreTests(unittest.TestCase):
         self.assertEqual(reopened.opened, 1)
         self.assertEqual(len(store.fetch_all("incidents")), 2)
 
+    def test_delayed_firing_cannot_reopen_an_older_completed_occurrence(self) -> None:
+        store = IncidentStore(self.db_path, "live")
+        self._ingest(store, payload("firing"), 100.0)
+        self._ingest(store, payload("resolved"), 101.0)
+        self._ingest(store, payload("firing", starts_at="2026-09-07T11:00:00Z"), 102.0)
+        self._ingest(store, payload("resolved", starts_at="2026-09-07T11:00:00Z"), 103.0)
+
+        restarted = IncidentStore(self.db_path, "live")
+        delayed = self._ingest(restarted, payload("firing"), 104.0)
+
+        self.assertEqual(delayed.repeated, 1)
+        self.assertEqual(delayed.opened, 0)
+        self.assertEqual(len(restarted.fetch_all("incidents")), 2)
+        self.assertEqual(len(restarted.fetch_all("notification_outbox")), 2)
+
+    def test_orphan_recovery_blocks_delayed_firing_but_allows_fresh_occurrence(self) -> None:
+        store = IncidentStore(self.db_path, "live")
+        self._ingest(store, payload("resolved"), 100.0)
+
+        restarted = IncidentStore(self.db_path, "live")
+        delayed = self._ingest(restarted, payload("firing"), 101.0)
+        self.assertEqual(delayed.repeated, 1)
+        self.assertEqual(restarted.fetch_all("incidents"), [])
+        self.assertEqual(restarted.fetch_all("notification_outbox"), [])
+
+        fresh = self._ingest(
+            restarted, payload("firing", starts_at="2026-09-07T11:00:00Z"), 102.0
+        )
+        self.assertEqual(fresh.opened, 1)
+        self.assertEqual(fresh.notifications_queued, 1)
+
+    def test_old_firing_does_not_overwrite_current_incident_details(self) -> None:
+        store = IncidentStore(self.db_path, "shadow")
+        self._ingest(store, payload("firing"), 100.0)
+        self._ingest(store, payload("resolved"), 101.0)
+        current = payload("firing", starts_at="2026-09-07T11:00:00Z")
+        current["alerts"][0]["annotations"]["summary"] = "Current incident"
+        self._ingest(store, current, 102.0)
+
+        self._ingest(store, payload("firing"), 103.0)
+        incident = store.fetch_all("incidents")[-1]
+        self.assertEqual(json.loads(incident["annotations_json"])["summary"], "Current incident")
+        self.assertEqual(incident["last_seen_at"], 102.0)
+
+    def test_stale_lease_cannot_acknowledge_or_retry_reclaimed_delivery(self) -> None:
+        store = IncidentStore(self.db_path, "live")
+        self._ingest(store, payload("firing"), 100.0)
+        self._ingest(store, payload("resolved"), 101.0)
+        original = store.claim_next(now=102.0, lease_seconds=5)
+        reclaimed = store.claim_next(now=108.0, lease_seconds=5)
+        self.assertEqual(original.id, reclaimed.id)
+        self.assertEqual(reclaimed.attempts, original.attempts + 1)
+
+        self.assertFalse(store.mark_sent(original, "old", sent_at=109.0))
+        self.assertFalse(store.mark_retry(original, "old", 1000.0, blocked_until=1000.0))
+        rows = store.fetch_all("notification_outbox")
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["state"], "sending")
+        self.assertIsNone(store.fetch_all("incidents")[0]["down_sent_at"])
+
+        self.assertTrue(store.mark_sent(reclaimed, "current", sent_at=110.0))
+        self.assertEqual(store.claim_next(now=111.0).kind, "recovery")
+
+    def test_v1_upgrade_preserves_incident_history_and_pending_delivery(self) -> None:
+        store = IncidentStore(self.db_path, "live")
+        self._ingest(store, payload("firing"), 100.0)
+        before = {
+            table: [dict(row) for row in store.fetch_all(table)]
+            for table in ("gateway_state", "incidents", "incident_events", "notification_outbox")
+        }
+        with sqlite3.connect(self.db_path) as connection:
+            connection.executescript(
+                "DROP TABLE telegram_delivery_state; "
+                "DROP INDEX incident_events_fingerprint_transition; PRAGMA user_version = 1;"
+            )
+
+        upgraded = IncidentStore(self.db_path, "live")
+        for table, rows in before.items():
+            self.assertEqual([dict(row) for row in upgraded.fetch_all(table)], rows)
+        with sqlite3.connect(self.db_path) as connection:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 2)
+        self.assertEqual(upgraded.claim_next(now=101.0).kind, "down")
+
+    def test_unknown_newer_schema_is_rejected_without_downgrade(self) -> None:
+        with sqlite3.connect(self.db_path) as connection:
+            connection.execute("PRAGMA user_version = 3")
+
+        with self.assertRaisesRegex(RuntimeError, "newer than supported"):
+            IncidentStore(self.db_path, "live")
+
+        with sqlite3.connect(self.db_path) as connection:
+            self.assertEqual(connection.execute("PRAGMA user_version").fetchone()[0], 3)
+            self.assertEqual(connection.execute("SELECT name FROM sqlite_master").fetchall(), [])
+
     def test_late_resolve_for_old_occurrence_does_not_close_new_open_incident(self) -> None:
         store = IncidentStore(self.db_path, "shadow")
         old_firing = payload("firing", starts_at="2026-09-07T10:00:00Z")

@@ -55,6 +55,7 @@ class FetchResult:
 	content_type: str
 	truncated: bool
 	error: str
+	final_url: str = ""
 
 
 @dataclass(frozen=True)
@@ -82,6 +83,7 @@ class ResourceParser(HTMLParser):
 		self.headline: list[str] = []
 		self._hidden_depth = 0
 		self._headline_depth = 0
+		self._base_seen = False
 
 	def _add(self, raw_url: str | None, kind: str) -> None:
 		if not raw_url or len(self.resources) >= self.extraction_cap:
@@ -94,7 +96,12 @@ class ResourceParser(HTMLParser):
 	def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
 		attributes = dict(attrs)
 		lower_tag = tag.lower()
-		if lower_tag == "img":
+		if lower_tag == "base" and attributes.get("href") and not self._base_seen:
+			self._base_seen = True
+			base_url = urljoin(self.base_url, attributes["href"])
+			if urlsplit(base_url).scheme in {"http", "https"}:
+				self.base_url = base_url
+		elif lower_tag == "img":
 			self._add(attributes.get("src"), "image")
 			for candidate in (attributes.get("srcset") or "").split(","):
 				self._add(candidate.strip().split(" ", 1)[0], "image")
@@ -196,6 +203,7 @@ def fetch_url(url: str, timeout: float, size_cap: int, user_agent: str) -> Fetch
 			status = int(getattr(response, "status", 0) or 0)
 			content = response.read(size_cap + 1)
 			content_type = response.headers.get_content_type() if response.headers else ""
+			final_url = response.geturl()
 		return FetchResult(
 			200 <= status < 400,
 			status,
@@ -203,6 +211,7 @@ def fetch_url(url: str, timeout: float, size_cap: int, user_agent: str) -> Fetch
 			content_type,
 			len(content) > size_cap,
 			"" if 200 <= status < 400 else f"http_{status}",
+			final_url,
 		)
 	except urllib.error.HTTPError as exc:
 		return FetchResult(False, int(exc.code), b"", "", False, f"http_{exc.code}")
@@ -237,20 +246,36 @@ def inspect_html(base_url: str, content: bytes, extraction_cap: int, min_visible
 
 
 def select_resources(resources: Mapping[str, str], maximum: int) -> list[str]:
-	return sorted(resources, key=lambda url: (hashlib.sha256(url.encode()).hexdigest(), url))[:maximum]
+	# Preserve deterministic sampling, but do not let many images crowd out the
+	# stylesheets and scripts required to render a usable page.
+	priority = {"css": 0, "javascript": 1, "image": 2}
+	return sorted(resources, key=lambda url: (
+		priority.get(resources[url], 3), hashlib.sha256(url.encode()).hexdigest(), url
+	))[:maximum]
 
 
-def check_resource(url: str, timeout: float, size_cap: int, user_agent: str) -> bool:
-	return fetch_url(url, timeout, size_cap, user_agent).success
+def check_resource(url: str, timeout: float, size_cap: int, user_agent: str, kind: str = "") -> bool:
+	result = fetch_url(url, timeout, size_cap, user_agent)
+	if not result.success:
+		return False
+	# A common broken deployment returns the SPA/login/error HTML with HTTP 200
+	# for a missing asset. That is not a successfully loaded stylesheet/image/JS.
+	return not (
+		kind in {"css", "javascript", "image"}
+		and result.content_type in {"text/html", "application/xhtml+xml"}
+	)
 
 
-def check_resources(urls: Iterable[str], timeout: float, size_cap: int, user_agent: str, workers: int) -> tuple[int, int]:
+def check_resources(urls: Iterable[str] | Mapping[str, str], timeout: float, size_cap: int, user_agent: str, workers: int) -> tuple[int, int]:
 	url_list = list(urls)
 	if not url_list:
 		return 0, 0
 	failures = 0
 	with concurrent.futures.ThreadPoolExecutor(max_workers=min(workers, len(url_list))) as pool:
-		futures = [pool.submit(check_resource, url, timeout, size_cap, user_agent) for url in url_list]
+		futures = [pool.submit(
+			check_resource, url, timeout, size_cap, user_agent,
+			urls.get(url, "") if isinstance(urls, Mapping) else "",
+		) for url in url_list]
 		for future in concurrent.futures.as_completed(futures):
 			try:
 				if not future.result():
@@ -281,11 +306,14 @@ def check_target(
 		reasons.append("unexpected_content_type")
 	else:
 		html_reasons, resources = inspect_html(
-			target.url, page.content, max(max_resources * 10, max_resources), min_visible_chars
+			page.final_url or target.url, page.content,
+			max(max_resources * 10, max_resources), min_visible_chars
 		)
 		reasons.extend(html_reasons)
 	selected = select_resources(resources, max_resources)
-	checked, failures = check_resources(selected, timeout, resource_size_cap, user_agent, resource_workers)
+	checked, failures = check_resources(
+		{url: resources[url] for url in selected}, timeout, resource_size_cap, user_agent, resource_workers
+	)
 	ratio = failures / checked if checked else 0.0
 	if checked and ratio >= resource_failure_threshold:
 		reasons.append("resource_failures")

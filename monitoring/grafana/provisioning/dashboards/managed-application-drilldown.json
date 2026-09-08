@@ -90,8 +90,8 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Application up",
-      "description": "",
+      "title": "Application runtime",
+      "description": "RUNNING requires at least one running container per expected service with fresh inventory. This does not evaluate Docker healthchecks.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -107,13 +107,49 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "STOPPED / MISSING",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "RUNNING",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "green",
@@ -121,9 +157,7 @@
               }
             ]
           },
-          "unit": "short",
-          "min": 0,
-          "max": 1
+          "unit": "short"
         },
         "overrides": []
       },
@@ -149,7 +183,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rs_monitoring_application_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
+          "expr": "rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -161,8 +195,8 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Running components",
-      "description": "",
+      "title": "Running services",
+      "description": "Count of expected services with a running replica, not count of containers. UNKNOWN services are listed below.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -178,7 +212,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -214,7 +270,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(max by (company,alias,stack,service,container) (rs_monitoring_component_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"})) or vector(0)",
+          "expr": "count(rs_monitoring_component_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\"} == 1) or (0 * count(rs_monitoring_component_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\"}))",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -226,7 +282,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Stopped components",
+      "title": "Services UNKNOWN",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -243,7 +299,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -252,7 +330,7 @@
                 "value": null
               },
               {
-                "color": "red",
+                "color": "yellow",
                 "value": 1
               }
             ]
@@ -283,7 +361,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "count(max by (company,alias,stack,service,container) (rs_monitoring_component_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) == 0) or vector(0)",
+          "expr": "count(rs_monitoring_component_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\"} < 0) or (0 * count(rs_monitoring_component_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\"}))",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -295,7 +373,7 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "HTTP up",
+      "title": "HTTP availability",
       "description": "",
       "datasource": {
         "type": "prometheus",
@@ -312,13 +390,49 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "FAILED",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "REACHABLE",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "green",
@@ -326,9 +440,7 @@
               }
             ]
           },
-          "unit": "short",
-          "min": 0,
-          "max": 1
+          "unit": "short"
         },
         "overrides": []
       },
@@ -354,7 +466,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "min(rs_monitoring_http_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}) or min(probe_success{job=\"blackbox_http_services\",company=~\"$company\",alias=~\"$server\",stack=~\"$application\"})",
+          "expr": "min(rs_monitoring_http_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"})",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -366,8 +478,8 @@
     {
       "id": 6,
       "type": "stat",
-      "title": "Integrity up",
-      "description": "Independent twice-daily heuristic check; No data is not interpreted as healthy.",
+      "title": "Integrity evidence",
+      "description": "Independent twice-daily heuristic check. Evidence older than 25 hours is UNKNOWN.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -383,13 +495,49 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "PROBLEM",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "NO CONFIRMED PROBLEM",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
               },
               {
                 "color": "green",
@@ -397,9 +545,7 @@
               }
             ]
           },
-          "unit": "short",
-          "min": 0,
-          "max": 1
+          "unit": "short"
         },
         "overrides": []
       },
@@ -454,7 +600,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -472,7 +640,7 @@
               }
             ]
           },
-          "unit": "dtdurations"
+          "unit": "d"
         },
         "overrides": []
       },
@@ -498,7 +666,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "min((rs_monitoring_tls_expiry_timestamp_seconds{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} or probe_ssl_earliest_cert_expiry{job=\"blackbox_http_services\",company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}) - time()) / 86400",
+          "expr": "min(rs_monitoring_tls_expiry_timestamp_seconds{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} - time()) / 86400",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -510,8 +678,8 @@
     {
       "id": 8,
       "type": "stat",
-      "title": "Backup age",
-      "description": "No data until a verified backup signal is normalized for this application.",
+      "title": "Oldest backup age",
+      "description": "Worst backup age; UNKNOWN until a verified signal is normalized for this application.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -527,7 +695,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -571,7 +761,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "min((time() - rs_monitoring_backup_last_success_timestamp_seconds{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}) / 3600)",
+          "expr": "max((time() - rs_monitoring_backup_last_success_timestamp_seconds{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}) / 3600)",
           "format": "time_series",
           "instant": true,
           "legendFormat": "",
@@ -583,8 +773,8 @@
     {
       "id": 9,
       "type": "table",
-      "title": "Component state",
-      "description": "Catalog-expected components matched to observed Docker containers.",
+      "title": "Expected service runtime",
+      "description": "Includes expected services with no observed container. Container selector affects resource panels only; it cannot hide a missing expected service.",
       "datasource": {
         "type": "prometheus",
         "uid": "PBFA97CFB590B2093"
@@ -600,13 +790,53 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "STOPPED / MISSING",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "RUNNING",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "gray",
                 "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           },
@@ -633,10 +863,10 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"})",
+          "expr": "rs_monitoring_component_status{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\"}",
           "format": "table",
           "instant": true,
-          "legendFormat": "{{service}} / {{container}}",
+          "legendFormat": "{{service}}",
           "range": false,
           "refId": "A"
         }
@@ -663,7 +893,29 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -696,7 +948,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "rs_monitoring_http_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} or probe_success{job=\"blackbox_http_services\",company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
+          "expr": "rs_monitoring_http_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}",
           "format": "table",
           "instant": true,
           "legendFormat": "HTTP · {{instance}}",
@@ -722,7 +974,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "((rs_monitoring_tls_expiry_timestamp_seconds{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} or probe_ssl_earliest_cert_expiry{job=\"blackbox_http_services\",company=~\"$company\",alias=~\"$server\",stack=~\"$application\"}) - time()) / 86400",
+          "expr": "(rs_monitoring_tls_expiry_timestamp_seconds{company=~\"$company\",alias=~\"$server\",stack=~\"$application\"} - time()) / 86400",
           "format": "table",
           "instant": true,
           "legendFormat": "TLS days · {{instance}}",
@@ -786,7 +1038,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -831,7 +1083,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_cpu_percent{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) or max by (company,alias,stack,service,container) (docker_stack_container_cpu_percent{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\",state=\"running\"})",
+          "expr": "rs_monitoring_component_cpu_percent{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{service}} / {{container}}",
@@ -881,7 +1133,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -926,7 +1178,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_memory_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) or max by (company,alias,stack,service,container) (docker_stack_container_memory_usage_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\",state=\"running\"})",
+          "expr": "rs_monitoring_component_memory_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{service}} / {{container}}",
@@ -976,7 +1228,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1021,7 +1273,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_network_rx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_net_rx_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_component_network_rx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{service}} / {{container}} RX",
@@ -1034,7 +1286,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_network_tx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_net_tx_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_component_network_tx_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{service}} / {{container}} TX",
@@ -1084,7 +1336,7 @@
               "type": "linear"
             },
             "showPoints": "never",
-            "spanNulls": true,
+            "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1129,7 +1381,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_block_read_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_block_read_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_component_block_read_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{service}} / {{container}} read",
@@ -1142,7 +1394,7 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "max by (company,alias,stack,service,container) (rs_monitoring_component_block_write_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_block_write_bytes{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\",state=\"running\"}[15m]), 0))",
+          "expr": "rs_monitoring_component_block_write_bytes_per_second{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
           "format": "time_series",
           "instant": false,
           "legendFormat": "{{service}} / {{container}} write",
@@ -1152,12 +1404,115 @@
       ]
     },
     {
+      "id": 16,
+      "type": "table",
+      "title": "Observed container runtime",
+      "description": "Container-level running state from fresh inventory. Docker healthcheck state is not exported yet; inspect the application endpoint independently.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "PBFA97CFB590B2093"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 8
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "-1": {
+                  "text": "UNKNOWN",
+                  "color": "gray",
+                  "index": 0
+                },
+                "0": {
+                  "text": "STOPPED",
+                  "color": "red",
+                  "index": 1
+                },
+                "1": {
+                  "text": "RUNNING",
+                  "color": "green",
+                  "index": 2
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "UNKNOWN",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "noValue": "UNKNOWN",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "gray",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "rs_monitoring_component_up{company=~\"$company\",alias=~\"$server\",stack=~\"$application\",service=~\"$component\",container=~\"$container\"}",
+          "format": "table",
+          "instant": true,
+          "legendFormat": "{{service}} / {{container}}",
+          "range": false,
+          "refId": "A"
+        }
+      ],
+      "transformations": []
+    },
+    {
       "id": 15,
       "type": "text",
       "title": "Operational links",
       "gridPos": {
         "x": 0,
-        "y": 31,
+        "y": 39,
         "w": 24,
         "h": 4
       },
@@ -1205,9 +1560,9 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(rs_monitoring_server_inventory_info{company=~\"$company\",server_status=\"active\"}, alias)",
+        "definition": "label_values(rs_monitoring_server_status{company=~\"$company\"}, alias)",
         "query": {
-          "query": "label_values(rs_monitoring_server_inventory_info{company=~\"$company\",server_status=\"active\"}, alias)",
+          "query": "label_values(rs_monitoring_server_status{company=~\"$company\"}, alias)",
           "refId": "var-server"
         },
         "refresh": 1,
@@ -1225,9 +1580,9 @@
           "type": "prometheus",
           "uid": "PBFA97CFB590B2093"
         },
-        "definition": "label_values(rs_monitoring_application_inventory_info{company=~\"$company\",alias=~\"$server\",application_status=\"active\"}, stack)",
+        "definition": "label_values(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\"}, stack)",
         "query": {
-          "query": "label_values(rs_monitoring_application_inventory_info{company=~\"$company\",alias=~\"$server\",application_status=\"active\"}, stack)",
+          "query": "label_values(rs_monitoring_application_status{company=~\"$company\",alias=~\"$server\"}, stack)",
           "refId": "var-application"
         },
         "refresh": 1,

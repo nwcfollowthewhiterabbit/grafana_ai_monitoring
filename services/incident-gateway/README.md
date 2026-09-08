@@ -15,16 +15,48 @@ commands are documented in `docs/deployments/con-integrated-compose.md`.
 
 - One open incident per Alertmanager fingerprint.
 - Repeated `firing`/`resolved` transitions are idempotent.
+- A `firing` replay with the same `startsAt` as any recorded Recovery, including
+  an orphan Recovery, cannot reopen an old occurrence or overwrite a newer one.
 - A resolved alert without an open incident is an immutable
   `orphan_resolved` audit event and never becomes a Telegram message.
 - A Recovery outbox row is created only after the matching DOWN item is actually
   marked `sent`. If Telegram is unavailable, DOWN keeps retrying; the resolved
   event waits durably and Recovery is enqueued in the DOWN success transaction.
+- Telegram renders that internal `recovery` transition as **ALERT RESOLVED**:
+  Prometheus no longer reports the alert as firing. This can also follow missing
+  telemetry, so the message does not claim independently verified service recovery.
 - Telegram is outbound-only and the sole Bot API method used is `sendMessage`.
 - Mode changes cancel every unsent outbox row. Shadow history cannot be replayed
   accidentally after enabling live delivery.
 - Immutable event rows are protected against SQL `UPDATE` and `DELETE` by
   triggers. Notification delivery is durable and at-least-once.
+- Reclaimed outbox leases reject acknowledgements from older delivery attempts.
+- Telegram `retry_after` pauses the entire gateway delivery queue from response
+  time; the cooldown survives process restarts. Ordinary network failures retry
+  only the affected message.
+
+Alertmanager must provide a stable `startsAt` to distinguish an occurrence from
+a replay. A new `startsAt` for a fingerprint that is already open does not
+automatically invent a Recovery for the previous outage. Such mismatches need
+reconciliation against the alert source; source-state reconciliation is not yet
+implemented. A process crash after Telegram accepts a message but before SQLite
+records success can still cause a duplicate send on retry (Bot API has no
+idempotency key for `sendMessage`).
+
+## Database upgrades and build provenance
+
+The gateway upgrades SQLite schema 1 to 2 transactionally at startup. Version 2
+adds a delivery cooldown table and an event lookup index; incident, event, and
+outbox data stay intact. A database with a newer unsupported `user_version` is
+rejected without changing its schema version. Back up the database with the
+SQLite backup API before replacing the gateway image and run one gateway writer
+per database. Older version-1 binaries do not honor shared rate limiting and
+unconditionally set `user_version=1`; do not use them as an in-place rollback
+against upgraded state. Use a version-aware image or the pre-upgrade backup.
+
+Build with `--build-arg VCS_REF=<git-commit>` to embed
+`org.opencontainers.image.revision` in the image. An omitted build argument is
+explicitly recorded as `unknown`.
 
 ## Configuration
 

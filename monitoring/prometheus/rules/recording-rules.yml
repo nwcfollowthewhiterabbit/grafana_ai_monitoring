@@ -42,21 +42,54 @@ groups:
     interval: 30s
     rules:
       - record: rs_monitoring_server_up
-        expr: max by (company, alias) (up{job="node_exporter_clients",monitoring_status!="pending_access"})
+        expr: |
+          max by (company, alias) (
+            up{job=~"node_exporter_clients|windows_exporter_clients",monitoring_status!="pending_access"}
+          )
+          and on (company, alias)
+          rs_monitoring_server_inventory_info{server_status="active"}
+
+      # Status is reachability of the configured exporter, not proof of host death.
+      # -1 = unknown / not onboarded, 0 = unreachable, 1 = reachable.
+      - record: rs_monitoring_server_status
+        expr: |
+          rs_monitoring_server_up
+          or on (company, alias)
+          -1 * max by (company, alias) (
+            rs_monitoring_server_inventory_info{server_status=~"active|pending_access|pending_discovery"}
+          )
+
+      # Textfiles survive stopped collectors: successful node scrapes alone do
+      # not establish current Docker evidence. Missing/error/future files fail closed.
+      - record: rs_monitoring_docker_telemetry_fresh
+        expr: |
+          max by (company, alias) (
+            (up{job="node_exporter_clients",monitoring_status!="pending_access"} == 1)
+            and on (job, instance)
+            (
+              (node_textfile_mtime_seconds{job="node_exporter_clients",file=~".*docker-stacks.prom"} >= time() - 900)
+              and
+              (node_textfile_mtime_seconds{job="node_exporter_clients",file=~".*docker-stacks.prom"} <= time() + 60)
+            )
+            unless on (job, instance)
+            (node_textfile_scrape_error{job="node_exporter_clients"} != 0)
+          )
 
       - record: rs_monitoring_server_cpu_utilization_ratio
         expr: |
           1 - avg by (company, alias) (
             rate(node_cpu_seconds_total{job="node_exporter_clients",mode="idle"}[5m])
           )
+          and on (company, alias) (rs_monitoring_server_up == 1)
 
       - record: rs_monitoring_server_memory_utilization_ratio
         expr: |
-          1 - (
+          (1 - (
             max by (company, alias) (node_memory_MemAvailable_bytes{job="node_exporter_clients"})
             /
             max by (company, alias) (node_memory_MemTotal_bytes{job="node_exporter_clients"})
-          )
+          ))
+          and on (company, alias) (rs_monitoring_server_up == 1)
 
       - record: rs_monitoring_server_root_disk_free_ratio
         expr: |
@@ -65,29 +98,41 @@ groups:
             /
             node_filesystem_size_bytes{job="node_exporter_clients",mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}
           )
+          and on (company, alias) (rs_monitoring_server_up == 1)
 
   - name: managed_monitoring_application_rollups
     interval: 30s
     rules:
-      - record: rs_monitoring_application_up
+      # One status per expected service. At least one running replica satisfies
+      # the current catalog contract; replica counts and Docker health are separate.
+      - record: rs_monitoring_component_status
         expr: |
-          sum by (company, alias, stack) (
-            rs_monitoring_expected_component_info
-          )
-          == bool
           (
-            sum by (company, alias, stack) (
+            (
               max by (company, alias, stack, service) (
                 docker_stack_container_running
+                and on (company, alias, stack, service)
+                rs_monitoring_expected_component_info
               )
-              and on (company, alias, stack, service)
-              rs_monitoring_expected_component_info
+              or
+              0 * max by (company, alias, stack, service) (rs_monitoring_expected_component_info)
             )
-            or
-            0 * sum by (company, alias, stack) (
-              rs_monitoring_expected_component_info
-            )
+            and on (company, alias) rs_monitoring_docker_telemetry_fresh
           )
+          or
+          -1 * max by (company, alias, stack, service) (rs_monitoring_expected_component_info)
+
+      - record: rs_monitoring_application_status
+        expr: |
+          min by (company, alias, stack) (rs_monitoring_component_status)
+          or
+          -1 * max by (company, alias, stack) (
+            rs_monitoring_application_inventory_info{application_status=~"active|pending_access|pending_discovery"}
+          )
+
+      # Compatibility binary series: absent when runtime evidence is unknown.
+      - record: rs_monitoring_application_up
+        expr: rs_monitoring_application_status >= 0
 
       - record: rs_monitoring_component_up
         expr: |
@@ -96,16 +141,11 @@ groups:
             and on (company, alias, stack, service)
             rs_monitoring_expected_component_info
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
 
       - record: rs_monitoring_application_running_components
         expr: |
-          sum by (company, alias, stack) (
-            max by (company, alias, stack, service) (
-              docker_stack_container_running
-            )
-            and on (company, alias, stack, service)
-            rs_monitoring_expected_component_info
-          )
+          sum by (company, alias, stack) (rs_monitoring_component_status >= 0)
 
       - record: rs_monitoring_application_component_count
         expr: |
@@ -116,38 +156,50 @@ groups:
       - record: rs_monitoring_application_cpu_percent
         expr: |
           sum by (company, alias, stack) (
-            docker_stack_container_cpu_percent{state="running",stack!~"monitoring.*|node-exporter"}
+            max by (company, alias, stack, service, container) (docker_stack_container_cpu_percent{state="running"})
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_application_memory_bytes
         expr: |
           sum by (company, alias, stack) (
-            docker_stack_container_memory_usage_bytes{state="running",stack!~"monitoring.*|node-exporter"}
+            max by (company, alias, stack, service, container) (docker_stack_container_memory_usage_bytes{state="running"})
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_application_network_rx_bytes_per_second
         expr: |
           sum by (company, alias, stack) (
-            clamp_min(rate(docker_stack_container_net_rx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            max by (company, alias, stack, service, container) (clamp_min(rate(docker_stack_container_net_rx_bytes{state="running"}[15m]), 0))
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_application_network_tx_bytes_per_second
         expr: |
           sum by (company, alias, stack) (
-            clamp_min(rate(docker_stack_container_net_tx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            max by (company, alias, stack, service, container) (clamp_min(rate(docker_stack_container_net_tx_bytes{state="running"}[15m]), 0))
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_application_block_read_bytes_per_second
         expr: |
           sum by (company, alias, stack) (
-            clamp_min(rate(docker_stack_container_block_read_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            max by (company, alias, stack, service, container) (clamp_min(rate(docker_stack_container_block_read_bytes{state="running"}[15m]), 0))
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_application_block_write_bytes_per_second
         expr: |
           sum by (company, alias, stack) (
-            clamp_min(rate(docker_stack_container_block_write_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            max by (company, alias, stack, service, container) (clamp_min(rate(docker_stack_container_block_write_bytes{state="running"}[15m]), 0))
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
   - name: managed_monitoring_component_rollups
     interval: 30s
@@ -155,38 +207,50 @@ groups:
       - record: rs_monitoring_component_cpu_percent
         expr: |
           max by (company, alias, stack, service, container) (
-            docker_stack_container_cpu_percent{state="running",stack!~"monitoring.*|node-exporter"}
+            docker_stack_container_cpu_percent{state="running"}
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_component_memory_bytes
         expr: |
           max by (company, alias, stack, service, container) (
-            docker_stack_container_memory_usage_bytes{state="running",stack!~"monitoring.*|node-exporter"}
+            docker_stack_container_memory_usage_bytes{state="running"}
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_component_network_rx_bytes_per_second
         expr: |
           max by (company, alias, stack, service, container) (
-            clamp_min(rate(docker_stack_container_net_rx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            clamp_min(rate(docker_stack_container_net_rx_bytes{state="running"}[15m]), 0)
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_component_network_tx_bytes_per_second
         expr: |
           max by (company, alias, stack, service, container) (
-            clamp_min(rate(docker_stack_container_net_tx_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            clamp_min(rate(docker_stack_container_net_tx_bytes{state="running"}[15m]), 0)
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_component_block_read_bytes_per_second
         expr: |
           max by (company, alias, stack, service, container) (
-            clamp_min(rate(docker_stack_container_block_read_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            clamp_min(rate(docker_stack_container_block_read_bytes{state="running"}[15m]), 0)
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
       - record: rs_monitoring_component_block_write_bytes_per_second
         expr: |
           max by (company, alias, stack, service, container) (
-            clamp_min(rate(docker_stack_container_block_write_bytes{state="running",stack!~"monitoring.*|node-exporter"}[15m]), 0)
+            clamp_min(rate(docker_stack_container_block_write_bytes{state="running"}[15m]), 0)
           )
+          and on (company, alias) rs_monitoring_docker_telemetry_fresh
+          and on (company, alias, stack) rs_monitoring_application_inventory_info{application_status="active"}
 
   - name: managed_monitoring_service_rollups
     interval: 30s
@@ -201,11 +265,24 @@ groups:
         expr: |
           label_replace(
             label_replace(
-              label_replace(1 - site_integrity_confirmed_problem, "company", "$1", "site_company", "(.*)"),
+              label_replace(
+                (1 - site_integrity_confirmed_problem)
+                and
+                (site_integrity_last_check_timestamp_seconds >= time() - 90000),
+                "company", "$1", "site_company", "(.*)"
+              ),
               "alias", "$1", "site_alias", "(.*)"
             ),
             "instance", "$1", "site_instance", "(.*)"
           )
+
+      # Company-scoped heartbeat allows the tenant proxy to distinguish zero
+      # incidents from an unavailable gateway without exposing another tenant.
+      - record: rs_monitoring_incident_pipeline_available
+        expr: |
+          max by (company) (rs_monitoring_server_inventory_info)
+          * on () group_left
+          max(up{job="incident_gateway"})
 
       - record: rs_monitoring_service_event_due_timestamp_seconds
         expr: |

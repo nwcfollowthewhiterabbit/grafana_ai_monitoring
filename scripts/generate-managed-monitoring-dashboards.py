@@ -34,7 +34,11 @@ def field_config(unit: str = "short", *, minimum: Optional[float] = None, maximu
                  links: Optional[list[dict]] = None) -> dict:
     defaults: dict = {
         "color": {"mode": "thresholds"},
-        "mappings": [],
+        "mappings": [
+            {"type": "special", "options": {"match": "null", "result": {"text": "UNKNOWN", "color": "gray"}}},
+            {"type": "special", "options": {"match": "nan", "result": {"text": "UNKNOWN", "color": "gray"}}},
+        ],
+        "noValue": "UNKNOWN",
         "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -51,6 +55,33 @@ def field_config(unit: str = "short", *, minimum: Optional[float] = None, maximu
     if links:
         defaults["links"] = links
     return {"defaults": defaults, "overrides": []}
+
+
+def state_panel(panel: dict, *, positive: str = "RUNNING", negative: str = "STOPPED / MISSING") -> dict:
+    """Render the explicit -1/0/1 status contract; absence never looks healthy."""
+    defaults = panel["fieldConfig"]["defaults"]
+    defaults["mappings"] = [
+        {"type": "value", "options": {
+            "-1": {"text": "UNKNOWN", "color": "gray", "index": 0},
+            "0": {"text": negative, "color": "red", "index": 1},
+            "1": {"text": positive, "color": "green", "index": 2},
+        }},
+        {"type": "special", "options": {"match": "null", "result": {"text": "UNKNOWN", "color": "gray"}}},
+    ]
+    defaults["thresholds"]["steps"] = [
+        {"color": "gray", "value": None}, {"color": "red", "value": 0}, {"color": "green", "value": 1},
+    ]
+    return panel
+
+
+def status_count(vector: str, comparison: str) -> str:
+    # A zero needs inventory evidence. An empty recording rule is UNKNOWN.
+    return f"count({vector} {comparison}) or (0 * count({vector}))"
+
+
+def incident_count(scope: str) -> str:
+    available = 'max(rs_monitoring_incident_pipeline_available{company=~"$company"}) == 1'
+    return f'(sum(rs_monitoring_open_incident{{{scope},state="open"}}) or (0 * ({available}))) and on () ({available})'
 
 
 def text_panel(panel_id: int, title: str, content: str, x: int, y: int, w: int, h: int) -> dict:
@@ -135,7 +166,7 @@ def timeseries_panel(panel_id: int, title: str, queries: list[tuple[str, str, st
                     "pointSize": 4,
                     "scaleDistribution": {"type": "linear"},
                     "showPoints": "never",
-                    "spanNulls": True,
+                    "spanNulls": False,
                     "stacking": {"group": "A", "mode": "none"},
                     "thresholdsStyle": {"mode": "off"},
                 },
@@ -227,24 +258,26 @@ def dashboard_link(title: str, uid: str, slug: str, params: str = "") -> dict:
 
 def build_fleet() -> dict:
     scope = 'company=~"$company",alias=~"$server"'
-    app_scope = scope + ',stack=~"$application",stack!~"monitoring.*|node-exporter"'
-    server_vector = f'max by (company,alias) (rs_monitoring_server_up{{{scope}}})'
-    app_vector = f'max by (company,alias,stack) (rs_monitoring_application_up{{{app_scope}}})'
+    app_scope = scope + ',stack=~"$application"'
+    server_vector = f'max by (company,alias) (rs_monitoring_server_status{{{scope}}})'
+    app_vector = f'max by (company,alias,stack) (rs_monitoring_application_status{{{app_scope}}})'
     variables = [
         query_var("company", "Company", "label_values(rs_monitoring_server_inventory_info, company)", multi=True, include_all=True),
-        query_var("server", "Server", 'label_values(rs_monitoring_server_inventory_info{company=~"$company",server_status="active"}, alias)', multi=True, include_all=True),
-        query_var("application", "Application", 'label_values(rs_monitoring_application_inventory_info{company=~"$company",alias=~"$server",application_status="active"}, stack)', multi=True, include_all=True),
+        query_var("server", "Server", 'label_values(rs_monitoring_server_status{company=~"$company"}, alias)', multi=True, include_all=True),
+        query_var("application", "Application", 'label_values(rs_monitoring_application_status{company=~"$company",alias=~"$server"}, stack)', multi=True, include_all=True),
     ]
     panels = [
         text_panel(1, "Operator view", "Start here: **what exists → where it runs → whether it works → active incident or due action**. Status panels use catalog-aware recording metrics; missing coverage remains visible rather than becoming green.", 0, 0, 24, 3),
-        stat_panel(2, "Servers down", f"count({server_vector} == 0) or vector(0)", 0, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
-        stat_panel(3, "Applications unhealthy", f"count({app_vector} == 0) or vector(0)", 4, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
-        stat_panel(4, "Firing alerts", f'sum(rs_monitoring_alert_firing{{{scope}}}) or count(ALERTS{{alertstate="firing",{scope}}}) or vector(0)', 8, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
-        stat_panel(5, "Open incidents", f'sum(rs_monitoring_open_incident{{{scope},state="open"}}) or vector(0)', 12, 3, 4, 4, thresholds=[("green", None), ("red", 1)], description="Strictly scoped to the selected company and server."),
-        stat_panel(6, "Service events due ≤30d", f'count(rs_monitoring_service_event_due_timestamp_seconds{{{scope}}} < time() + 30 * 86400)', 16, 3, 4, 4, thresholds=[("green", None), ("yellow", 1), ("red", 5)], description="No data means the deadline registry has no verified entries; it is not interpreted as green coverage."),
-        stat_panel(7, "TLS expires ≤30d", f'count((probe_ssl_earliest_cert_expiry{{job="blackbox_http_services",{app_scope}}} - time()) < 30 * 86400) or vector(0)', 20, 3, 4, 4, thresholds=[("green", None), ("yellow", 1), ("red", 5)]),
-        table_panel(8, "Server status", [("A", server_vector, "{{company}} / {{alias}}")], 0, 7, 12, 8, description="1=reachable, 0=down.", data_link={"title": "Open server", "url": '/d/managed-server-drilldown/managed-server-drilldown?var-company=${__data.fields["company"]}&var-server=${__data.fields["alias"]}', "targetBlank": False}),
-        table_panel(9, "Application status", [("A", app_vector, "{{company}} / {{alias}} / {{stack}}")], 12, 7, 12, 8, description="Application is healthy only when all observed components are running.", data_link={"title": "Open application", "url": '/d/managed-application-drilldown/managed-application-drilldown?var-company=${__data.fields["company"]}&var-server=${__data.fields["alias"]}&var-application=${__data.fields["stack"]}', "targetBlank": False}),
+        stat_panel(2, "Exporters unreachable", status_count(server_vector, "== 0"), 0, 3, 3, 4, thresholds=[("green", None), ("red", 1)]),
+        stat_panel(3, "Apps stopped / missing", status_count(app_vector, "== 0"), 3, 3, 3, 4, thresholds=[("green", None), ("red", 1)]),
+        stat_panel(4, "Firing alerts", f'count(ALERTS{{alertstate="firing",{scope}}}) or (0 * count({server_vector}))', 6, 3, 3, 4, thresholds=[("green", None), ("red", 1)]),
+        stat_panel(5, "Open incidents", incident_count(scope), 9, 3, 3, 4, thresholds=[("green", None), ("red", 1)], description="Scoped to the selected company/server. Zero requires a reachable incident gateway; unavailable pipeline is UNKNOWN."),
+        stat_panel(6, "Events due ≤30d", status_count(f'rs_monitoring_service_event_due_timestamp_seconds{{{scope}}}', '< time() + 30 * 86400'), 12, 3, 3, 4, thresholds=[("green", None), ("yellow", 1), ("red", 5)], description="UNKNOWN means no verified deadline entries in scope."),
+        stat_panel(7, "TLS expires ≤30d", status_count(f'rs_monitoring_tls_expiry_timestamp_seconds{{{app_scope}}}', '< time() + 30 * 86400'), 15, 3, 3, 4, thresholds=[("green", None), ("yellow", 1), ("red", 5)]),
+        stat_panel(12, "Servers UNKNOWN", status_count(server_vector, "< 0"), 18, 3, 3, 4, thresholds=[("green", None), ("yellow", 1)]),
+        stat_panel(13, "Apps UNKNOWN", status_count(app_vector, "< 0"), 21, 3, 3, 4, thresholds=[("green", None), ("yellow", 1)]),
+        state_panel(table_panel(8, "Server telemetry status", [("A", server_vector, "{{company}} / {{alias}}")], 0, 7, 12, 8, description="Exporter reachability; UNKNOWN includes missing targets and pending onboarding.", data_link={"title": "Open server", "url": '/d/managed-server-drilldown/managed-server-drilldown?var-company=${__data.fields["company"]}&var-server=${__data.fields["alias"]}', "targetBlank": False}), positive="REACHABLE", negative="UNREACHABLE"),
+        state_panel(table_panel(9, "Application runtime status", [("A", app_vector, "{{company}} / {{alias}} / {{stack}}")], 12, 7, 12, 8, description="RUNNING means each expected service has at least one running container in fresh inventory. Docker healthchecks and external checks are separate. Missing/stale inventory is UNKNOWN.", data_link={"title": "Open application", "url": '/d/managed-application-drilldown/managed-application-drilldown?var-company=${__data.fields["company"]}&var-server=${__data.fields["alias"]}&var-application=${__data.fields["stack"]}', "targetBlank": False})),
         table_panel(10, "Open incident queue", [("A", f'rs_monitoring_open_incident{{{scope},state="open"}}', "{{severity}} · {{alias}} · {{stack}} · {{service}}"), ("B", f'ALERTS{{alertstate="firing",{scope}}}', "fallback alert · {{alertname}} · {{alias}}")], 0, 15, 12, 9, description="A is the bounded lifecycle aggregate. B is a raw Prometheus fallback and is not an incident."),
         table_panel(11, "Service-event queue", [("A", f'rs_monitoring_service_event_due_timestamp_seconds{{{scope}}} - time()', "{{event_type}} · {{alias}} · {{stack}}")], 12, 15, 12, 9, description="Seconds until domain, certificate, subscription or maintenance deadline."),
     ]
@@ -257,32 +290,32 @@ def build_fleet() -> dict:
 
 def build_server() -> dict:
     scope = 'company=~"$company",alias=~"$server"'
-    app_scope = scope + ',stack=~"$application",stack!~"monitoring.*|node-exporter"'
-    app_up = f'rs_monitoring_application_up{{{app_scope}}}'
+    app_scope = scope + ',stack=~"$application"'
+    app_up = f'rs_monitoring_application_status{{{app_scope}}}'
     variables = [
         query_var("company", "Company", "label_values(rs_monitoring_server_inventory_info, company)"),
-        query_var("server", "Server", 'label_values(rs_monitoring_server_inventory_info{company=~"$company",server_status="active"}, alias)'),
-        query_var("application", "Application", 'label_values(rs_monitoring_application_inventory_info{company=~"$company",alias=~"$server",application_status="active"}, stack)', multi=True, include_all=True),
+        query_var("server", "Server", 'label_values(rs_monitoring_server_status{company=~"$company"}, alias)'),
+        query_var("application", "Application", 'label_values(rs_monitoring_application_status{company=~"$company",alias=~"$server"}, stack)', multi=True, include_all=True),
     ]
     panels = [
         text_panel(1, "Server workflow", "Confirm server reachability, identify the affected **application**, then inspect its aggregate resource rates and components. Network and block I/O are rates, never raw cumulative totals.", 0, 0, 24, 3),
-        stat_panel(2, "Server up", f'max(rs_monitoring_server_up{{{scope}}})', 0, 3, 4, 4, thresholds=[("red", None), ("green", 1)], minimum=0, maximum=1),
-        stat_panel(3, "Unhealthy applications", f"count({app_up} == 0) or vector(0)", 4, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
-        stat_panel(4, "Running components", f'sum(rs_monitoring_component_up{{{app_scope}}}) or vector(0)', 8, 3, 4, 4),
-        stat_panel(5, "RAM used", f'max(100 * rs_monitoring_server_memory_utilization_ratio{{{scope}}}) or max(100 * (1 - node_memory_MemAvailable_bytes{{job="node_exporter_clients",{scope}}} / node_memory_MemTotal_bytes{{job="node_exporter_clients",{scope}}}))', 12, 3, 4, 4, unit="percent", thresholds=[("green", None), ("yellow", 75), ("red", 90)], minimum=0, maximum=100),
-        stat_panel(6, "Root disk free", f'min(100 * rs_monitoring_server_root_disk_free_ratio{{{scope}}}) or min(100 * node_filesystem_avail_bytes{{job="node_exporter_clients",{scope},mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}} / node_filesystem_size_bytes{{job="node_exporter_clients",{scope},mountpoint="/",fstype!~"tmpfs|overlay|squashfs"}})', 16, 3, 4, 4, unit="percent", thresholds=[("red", None), ("yellow", 15), ("green", 25)], minimum=0, maximum=100),
-        stat_panel(7, "Open incidents", f'sum(rs_monitoring_open_incident{{{scope},state="open"}}) or vector(0)', 20, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
-        table_panel(8, "Applications on server", [("A", app_up, "{{stack}}")], 0, 7, 12, 8, data_link={"title": "Open application", "url": '/d/managed-application-drilldown/managed-application-drilldown?var-company=$company&var-server=$server&var-application=${__data.fields["stack"]}', "targetBlank": False}),
-        table_panel(9, "Components on server", [("A", f'max by (company,alias,stack,service,container) (rs_monitoring_component_up{{{app_scope}}})', "{{stack}} / {{service}} / {{container}}")], 12, 7, 12, 8, description="Expected catalog components observed in the runtime; 1=running."),
-        timeseries_panel(10, "CPU by application", [("A", f'max by (company,alias,stack) (rs_monitoring_application_cpu_percent{{{app_scope}}}) or sum by (company,alias,stack) (docker_stack_container_cpu_percent{{{app_scope},state="running"}})', "{{stack}}")], 0, 15, 12, 8, unit="percent"),
-        timeseries_panel(11, "RAM by application", [("A", f'max by (company,alias,stack) (rs_monitoring_application_memory_bytes{{{app_scope}}}) or sum by (company,alias,stack) (docker_stack_container_memory_usage_bytes{{{app_scope},state="running"}})', "{{stack}}")], 12, 15, 12, 8, unit="bytes"),
+        state_panel(stat_panel(2, "Host telemetry", f'min(rs_monitoring_server_status{{{scope}}})', 0, 3, 4, 4), positive="REACHABLE", negative="UNREACHABLE"),
+        stat_panel(3, "Apps stopped / missing", status_count(app_up, "== 0"), 4, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
+        stat_panel(4, "Apps UNKNOWN", status_count(app_up, "< 0"), 8, 3, 4, 4, thresholds=[("green", None), ("yellow", 1)]),
+        stat_panel(5, "RAM used", f'max(100 * rs_monitoring_server_memory_utilization_ratio{{{scope}}})', 12, 3, 4, 4, unit="percent", thresholds=[("green", None), ("yellow", 75), ("red", 90)], minimum=0, maximum=100),
+        stat_panel(6, "Root disk free", f'min(100 * rs_monitoring_server_root_disk_free_ratio{{{scope}}})', 16, 3, 4, 4, unit="percent", thresholds=[("red", None), ("yellow", 15), ("green", 25)], minimum=0, maximum=100),
+        stat_panel(7, "Open incidents", incident_count(scope), 20, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
+        state_panel(table_panel(8, "Application runtime on server", [("A", app_up, "{{stack}}")], 0, 7, 12, 8, data_link={"title": "Open application", "url": '/d/managed-application-drilldown/managed-application-drilldown?var-company=$company&var-server=$server&var-application=${__data.fields["stack"]}', "targetBlank": False})),
+        state_panel(table_panel(9, "Expected components on server", [("A", f'rs_monitoring_component_status{{{app_scope}}}', "{{stack}} / {{service}}")], 12, 7, 12, 8, description="One row per expected service, including missing containers. UNKNOWN when inventory is unavailable or older than 15 minutes.")),
+        timeseries_panel(10, "CPU by application", [("A", f'rs_monitoring_application_cpu_percent{{{app_scope}}}', "{{stack}}")], 0, 15, 12, 8, unit="percent", description="Sum across containers; duplicate scrape series are deduplicated. CPU can exceed 100% across cores. Stale inventory creates a gap."),
+        timeseries_panel(11, "RAM by application", [("A", f'rs_monitoring_application_memory_bytes{{{app_scope}}}', "{{stack}}")], 12, 15, 12, 8, unit="bytes"),
         timeseries_panel(12, "Network rate by application", [
-            ("A", f'max by (company,alias,stack) (rs_monitoring_application_network_rx_bytes_per_second{{{app_scope}}}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_net_rx_bytes{{{app_scope},state="running"}}[15m]), 0))', "{{stack}} RX"),
-            ("B", f'max by (company,alias,stack) (rs_monitoring_application_network_tx_bytes_per_second{{{app_scope}}}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_net_tx_bytes{{{app_scope},state="running"}}[15m]), 0))', "{{stack}} TX"),
-        ], 0, 23, 12, 8, unit="Bps", description="Fallback derives rates from cumulative Docker exporter values over 15 minutes."),
+            ("A", f'rs_monitoring_application_network_rx_bytes_per_second{{{app_scope}}}', "{{stack}} RX"),
+            ("B", f'rs_monitoring_application_network_tx_bytes_per_second{{{app_scope}}}', "{{stack}} TX"),
+        ], 0, 23, 12, 8, unit="Bps", description="Rates estimated over 15 minutes from Docker cumulative display values; inventory must be fresh."),
         timeseries_panel(13, "Block I/O rate by application", [
-            ("A", f'max by (company,alias,stack) (rs_monitoring_application_block_read_bytes_per_second{{{app_scope}}}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_block_read_bytes{{{app_scope},state="running"}}[15m]), 0))', "{{stack}} read"),
-            ("B", f'max by (company,alias,stack) (rs_monitoring_application_block_write_bytes_per_second{{{app_scope}}}) or sum by (company,alias,stack) (clamp_min(rate(docker_stack_container_block_write_bytes{{{app_scope},state="running"}}[15m]), 0))', "{{stack}} write"),
+            ("A", f'rs_monitoring_application_block_read_bytes_per_second{{{app_scope}}}', "{{stack}} read"),
+            ("B", f'rs_monitoring_application_block_write_bytes_per_second{{{app_scope}}}', "{{stack}} write"),
         ], 12, 23, 12, 8, unit="Bps", description="No raw lifetime block counters are displayed."),
         table_panel(14, "Incidents and raw alert fallback", [("A", f'rs_monitoring_open_incident{{{scope},state="open"}}', "{{severity}} · {{stack}} · {{service}}"), ("B", f'ALERTS{{alertstate="firing",{scope}}}', "fallback · {{alertname}}")], 0, 31, 24, 8),
     ]
@@ -296,42 +329,43 @@ def build_server() -> dict:
 def build_application() -> dict:
     scope = 'company=~"$company",alias=~"$server",stack=~"$application"'
     component_scope = scope + ',service=~"$component",container=~"$container"'
-    app_up = f'rs_monitoring_application_up{{{scope}}}'
-    component_up = f'max by (company,alias,stack,service,container) (rs_monitoring_component_up{{{component_scope}}})'
+    app_up = f'rs_monitoring_application_status{{{scope}}}'
+    component_up = f'rs_monitoring_component_status{{{scope},service=~"$component"}}'
     variables = [
         query_var("company", "Company", "label_values(rs_monitoring_server_inventory_info, company)"),
-        query_var("server", "Server", 'label_values(rs_monitoring_server_inventory_info{company=~"$company",server_status="active"}, alias)'),
-        query_var("application", "Application", 'label_values(rs_monitoring_application_inventory_info{company=~"$company",alias=~"$server",application_status="active"}, stack)'),
+        query_var("server", "Server", 'label_values(rs_monitoring_server_status{company=~"$company"}, alias)'),
+        query_var("application", "Application", 'label_values(rs_monitoring_application_status{company=~"$company",alias=~"$server"}, stack)'),
         query_var("component", "Component", 'label_values(rs_monitoring_expected_component_info{company=~"$company",alias=~"$server",stack=~"$application"}, service)', multi=True, include_all=True),
         query_var("container", "Container", 'label_values(rs_monitoring_component_up{company=~"$company",alias=~"$server",stack=~"$application",service=~"$component"}, container)', multi=True, include_all=True),
     ]
     panels = [
         text_panel(1, "Application workflow", "Treat infrastructure and external experience as independent signals. A healthy container does not prove the site works. Use the HTTP, integrity, TLS and backup panels and links after checking components.", 0, 0, 24, 3),
-        stat_panel(2, "Application up", app_up, 0, 3, 4, 4, thresholds=[("red", None), ("green", 1)], minimum=0, maximum=1),
-        stat_panel(3, "Running components", f'sum({component_up}) or vector(0)', 4, 3, 4, 4),
-        stat_panel(4, "Stopped components", f'count({component_up} == 0) or vector(0)', 8, 3, 4, 4, thresholds=[("green", None), ("red", 1)]),
-        stat_panel(5, "HTTP up", f'min(rs_monitoring_http_up{{{scope}}}) or min(probe_success{{job="blackbox_http_services",{scope}}})', 12, 3, 3, 4, thresholds=[("red", None), ("green", 1)], minimum=0, maximum=1),
-        stat_panel(6, "Integrity up", f'min(rs_monitoring_integrity_up{{{scope}}})', 15, 3, 3, 4, thresholds=[("red", None), ("green", 1)], minimum=0, maximum=1, description="Independent twice-daily heuristic check; No data is not interpreted as healthy."),
-        stat_panel(7, "TLS days left", f'min((rs_monitoring_tls_expiry_timestamp_seconds{{{scope}}} or probe_ssl_earliest_cert_expiry{{job="blackbox_http_services",{scope}}}) - time()) / 86400', 18, 3, 3, 4, unit="dtdurations", thresholds=[("red", None), ("yellow", 14), ("green", 30)]),
-        stat_panel(8, "Backup age", f'min((time() - rs_monitoring_backup_last_success_timestamp_seconds{{{scope}}}) / 3600)', 21, 3, 3, 4, unit="h", thresholds=[("green", None), ("yellow", 24), ("red", 48)], description="No data until a verified backup signal is normalized for this application."),
-        table_panel(9, "Component state", [("A", component_up, "{{service}} / {{container}}")], 0, 7, 12, 8, description="Catalog-expected components matched to observed Docker containers."),
+        state_panel(stat_panel(2, "Application runtime", app_up, 0, 3, 4, 4, description="RUNNING requires at least one running container per expected service with fresh inventory. This does not evaluate Docker healthchecks.")),
+        stat_panel(3, "Running services", status_count(component_up, "== 1"), 4, 3, 4, 4, description="Count of expected services with a running replica, not count of containers. UNKNOWN services are listed below."),
+        stat_panel(4, "Services UNKNOWN", status_count(component_up, "< 0"), 8, 3, 4, 4, thresholds=[("green", None), ("yellow", 1)]),
+        state_panel(stat_panel(5, "HTTP availability", f'min(rs_monitoring_http_up{{{scope}}})', 12, 3, 3, 4), positive="REACHABLE", negative="FAILED"),
+        state_panel(stat_panel(6, "Integrity evidence", f'min(rs_monitoring_integrity_up{{{scope}}})', 15, 3, 3, 4, description="Independent twice-daily heuristic check. Evidence older than 25 hours is UNKNOWN."), positive="NO CONFIRMED PROBLEM", negative="PROBLEM"),
+        stat_panel(7, "TLS days left", f'min(rs_monitoring_tls_expiry_timestamp_seconds{{{scope}}} - time()) / 86400', 18, 3, 3, 4, unit="d", thresholds=[("red", None), ("yellow", 14), ("green", 30)]),
+        stat_panel(8, "Oldest backup age", f'max((time() - rs_monitoring_backup_last_success_timestamp_seconds{{{scope}}}) / 3600)', 21, 3, 3, 4, unit="h", thresholds=[("green", None), ("yellow", 24), ("red", 48)], description="Worst backup age; UNKNOWN until a verified signal is normalized for this application."),
+        state_panel(table_panel(9, "Expected service runtime", [("A", component_up, "{{service}}")], 0, 7, 12, 8, description="Includes expected services with no observed container. Container selector affects resource panels only; it cannot hide a missing expected service.")),
         table_panel(10, "External checks", [
-            ("A", f'rs_monitoring_http_up{{{scope}}} or probe_success{{job="blackbox_http_services",{scope}}}', "HTTP · {{instance}}"),
+            ("A", f'rs_monitoring_http_up{{{scope}}}', "HTTP · {{instance}}"),
             ("B", f'rs_monitoring_integrity_up{{{scope}}}', "Integrity · {{instance}}"),
-            ("C", f'((rs_monitoring_tls_expiry_timestamp_seconds{{{scope}}} or probe_ssl_earliest_cert_expiry{{job="blackbox_http_services",{scope}}}) - time()) / 86400', "TLS days · {{instance}}"),
+            ("C", f'(rs_monitoring_tls_expiry_timestamp_seconds{{{scope}}} - time()) / 86400', "TLS days · {{instance}}"),
             ("D", f'(time() - rs_monitoring_backup_last_success_timestamp_seconds{{{scope}}}) / 3600', "Backup age hours · {{stack}}"),
         ], 12, 7, 12, 8, description="Independent external and continuity signals; missing planned metrics remain visibly No data."),
-        timeseries_panel(11, "CPU by component", [("A", f'max by (company,alias,stack,service,container) (rs_monitoring_component_cpu_percent{{{component_scope}}}) or max by (company,alias,stack,service,container) (docker_stack_container_cpu_percent{{{component_scope},state="running"}})', "{{service}} / {{container}}")], 0, 15, 12, 8, unit="percent"),
-        timeseries_panel(12, "RAM by component", [("A", f'max by (company,alias,stack,service,container) (rs_monitoring_component_memory_bytes{{{component_scope}}}) or max by (company,alias,stack,service,container) (docker_stack_container_memory_usage_bytes{{{component_scope},state="running"}})', "{{service}} / {{container}}")], 12, 15, 12, 8, unit="bytes"),
+        timeseries_panel(11, "CPU by component", [("A", f'rs_monitoring_component_cpu_percent{{{component_scope}}}', "{{service}} / {{container}}")], 0, 15, 12, 8, unit="percent"),
+        timeseries_panel(12, "RAM by component", [("A", f'rs_monitoring_component_memory_bytes{{{component_scope}}}', "{{service}} / {{container}}")], 12, 15, 12, 8, unit="bytes"),
         timeseries_panel(13, "Network rate by component", [
-            ("A", f'max by (company,alias,stack,service,container) (rs_monitoring_component_network_rx_bytes_per_second{{{component_scope}}}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_net_rx_bytes{{{component_scope},state="running"}}[15m]), 0))', "{{service}} / {{container}} RX"),
-            ("B", f'max by (company,alias,stack,service,container) (rs_monitoring_component_network_tx_bytes_per_second{{{component_scope}}}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_net_tx_bytes{{{component_scope},state="running"}}[15m]), 0))', "{{service}} / {{container}} TX"),
+            ("A", f'rs_monitoring_component_network_rx_bytes_per_second{{{component_scope}}}', "{{service}} / {{container}} RX"),
+            ("B", f'rs_monitoring_component_network_tx_bytes_per_second{{{component_scope}}}', "{{service}} / {{container}} TX"),
         ], 0, 23, 12, 8, unit="Bps"),
         timeseries_panel(14, "Block I/O rate by component", [
-            ("A", f'max by (company,alias,stack,service,container) (rs_monitoring_component_block_read_bytes_per_second{{{component_scope}}}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_block_read_bytes{{{component_scope},state="running"}}[15m]), 0))', "{{service}} / {{container}} read"),
-            ("B", f'max by (company,alias,stack,service,container) (rs_monitoring_component_block_write_bytes_per_second{{{component_scope}}}) or max by (company,alias,stack,service,container) (clamp_min(rate(docker_stack_container_block_write_bytes{{{component_scope},state="running"}}[15m]), 0))', "{{service}} / {{container}} write"),
+            ("A", f'rs_monitoring_component_block_read_bytes_per_second{{{component_scope}}}', "{{service}} / {{container}} read"),
+            ("B", f'rs_monitoring_component_block_write_bytes_per_second{{{component_scope}}}', "{{service}} / {{container}} write"),
         ], 12, 23, 12, 8, unit="Bps"),
-        text_panel(15, "Operational links", "[HTTP availability](/d/service-availability/service-availability?var-company=$company&var-node=$server&var-stack=$application) · [Backup detail](/d/cloud-backups/cloud-backups) · [Server drilldown](/d/managed-server-drilldown/managed-server-drilldown?var-company=$company&var-server=$server&var-application=$application)\n\nIntegrity evidence is an independent heuristic signal. Service deadlines remain No data until their dates and owners are verified in the catalog.", 0, 31, 24, 4),
+        state_panel(table_panel(16, "Observed container runtime", [("A", f'rs_monitoring_component_up{{{component_scope}}}', "{{service}} / {{container}}")], 0, 31, 24, 8, description="Container-level running state from fresh inventory. Docker healthcheck state is not exported yet; inspect the application endpoint independently."), negative="STOPPED"),
+        text_panel(15, "Operational links", "[HTTP availability](/d/service-availability/service-availability?var-company=$company&var-node=$server&var-stack=$application) · [Backup detail](/d/cloud-backups/cloud-backups) · [Server drilldown](/d/managed-server-drilldown/managed-server-drilldown?var-company=$company&var-server=$server&var-application=$application)\n\nIntegrity evidence is an independent heuristic signal. Service deadlines remain No data until their dates and owners are verified in the catalog.", 0, 39, 24, 4),
     ]
     links = [
         dashboard_link("Fleet overview", "managed-fleet-overview", "managed-fleet-overview", "var-company=$company&var-server=$server&var-application=$application"),
