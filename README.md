@@ -54,13 +54,27 @@ The current deployment and verification evidence are recorded in `docs/deploymen
 
 ## Managed inventory
 
-The validated catalog currently contains 3 companies, 8 servers, 43 applications, 72 components and 13 public HTTP services.
+The validated catalog currently contains 5 companies, 12 servers, 43 applications,
+72 components and 13 public HTTP services. The four newly registered servers
+are `pending_discovery`, with monitoring disabled and no invented workloads or
+scrape targets; registration is not proof of health.
 
 | Company ID | Server IDs |
 | --- | --- |
 | greenleaf | cloud, testing, new |
-| rentall | payroll, howbot |
-| my-own | test, con, deployment |
+| rentall (display name: HOW; historical metric label retained) | payroll, howbot |
+| my-own | test, con, deployment, con2, voice |
+| seedquest | seedquest |
+| mb-skolas | wherp |
+
+Owner-confirmed on 2026-09-08: `cloud` is Greenleaf production; `testing` is its
+separate test server and intended future destination for outdated/unreliable
+websites. No site migration is implied or performed by this catalog update.
+Rabbit infrastructure ownership does not make every hosted customer application
+Rabbit-owned. Existing `new` and `test` entries remain pending clarification.
+Grafana's metric-based selectors still show legacy `rentall`; display metadata
+does not rename time series, alter client access or merge customer scopes.
+See [application and verification record](docs/deployments/server-ownership-2026-09-08.md).
 
 ## Files
 

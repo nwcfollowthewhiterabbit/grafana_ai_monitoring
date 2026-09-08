@@ -11,6 +11,8 @@ labels:
     - greenleaf
     - rentall
     - my own
+    - seedquest
+    - mb-skolas
 
 # Canonical source of truth. The legacy sections below remain available during
 # migration and are checked against this hierarchy by the catalog validator.
@@ -331,7 +333,9 @@ companies:
             components: []
       - id: testing
         alias: testing
-        display_name: Greenleaf staging server
+        display_name: Greenleaf test server
+        # Existing technical role retained. Owner intends a future migration
+        # of outdated websites here; no application placement changes yet.
         role: staging
         status: active
         owners: *provider_owners
@@ -384,7 +388,9 @@ companies:
 
   - id: rentall
     label: rentall
-    display_name: Rentall
+    # Owner confirmed HOW for howbot/payroll on 2026-09-08. Preserve the
+    # historical ID/metric label; this is not a tenant/ACL or TSDB migration.
+    display_name: HOW
     owners: *provider_owners
     customer_visible: true
     repository: *monitoring_repository
@@ -393,7 +399,7 @@ companies:
     servers:
       - id: payroll
         alias: payroll
-        display_name: Rentall payroll server
+        display_name: HOW payroll production server
         role: production
         status: active
         owners: *provider_owners
@@ -417,7 +423,7 @@ companies:
               - {id: payroll-bot, service: payroll-bot, display_name: Payroll bot, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: &runtime_component_monitoring {enabled: true, signals: [containers, logs]}}
       - id: howbot
         alias: howbot
-        display_name: Rentall bot server
+        display_name: HOW bot production server
         role: production
         status: active
         owners: *provider_owners
@@ -529,6 +535,30 @@ companies:
     runbook: null
     monitoring: *company_monitoring
     servers:
+      # Ownership confirmed by the owner; telemetry/workloads not inspected.
+      # Registration must not create targets or imply that a host is healthy.
+      - id: con2
+        alias: con2
+        display_name: Rabbit Systems con2 infrastructure server
+        role: infrastructure
+        status: pending_discovery
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
+      - id: voice
+        alias: voice
+        display_name: Rabbit Systems voice infrastructure server
+        role: infrastructure
+        status: pending_discovery
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
       - id: test
         alias: test
         display_name: Rabbit Systems lab server
@@ -768,6 +798,49 @@ companies:
             components:
               - {id: chaplygin, service: chaplygin, display_name: Chaplygin, expected: false, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
 
+  # Owner-confirmed customer production hosts, not yet onboarded to telemetry.
+  # No customer Grafana access, scrape endpoint or workload is implied here.
+  - id: seedquest
+    label: seedquest
+    display_name: SeedQuest
+    owners: *provider_owners
+    customer_visible: false
+    repository: *monitoring_repository
+    runbook: null
+    monitoring: *pending_discovery_monitoring
+    servers:
+      - id: seedquest
+        alias: seedquest
+        display_name: SeedQuest production server
+        role: production
+        status: pending_discovery
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
+  - id: mb-skolas
+    label: mb-skolas
+    display_name: MB Skolas
+    owners: *provider_owners
+    customer_visible: false
+    repository: *monitoring_repository
+    runbook: null
+    monitoring: *pending_discovery_monitoring
+    servers:
+      - id: wherp
+        alias: wherp
+        display_name: MB Skolas ERP production server
+        role: production
+        status: pending_discovery
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
+
 service_event_defaults:
   domain:
     admin_lead_days: [60, 30, 14, 7, 1, 0]
@@ -813,6 +886,22 @@ nodes:
   - alias: howbot
     company: rentall
     role: production
+  - alias: con2
+    company: my own
+    role: infrastructure
+    status: pending_discovery
+  - alias: voice
+    company: my own
+    role: infrastructure
+    status: pending_discovery
+  - alias: seedquest
+    company: seedquest
+    role: production
+    status: pending_discovery
+  - alias: wherp
+    company: mb-skolas
+    role: production
+    status: pending_discovery
 
 http_services:
   - company: greenleaf
