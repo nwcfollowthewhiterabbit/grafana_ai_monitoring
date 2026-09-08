@@ -34,6 +34,13 @@ ports. The systemd service on con opens only the declared sockets. Host trust is
 pinned from the existing administrative SSH connection. No existing private key
 was copied.
 
+The two retained exporter containers currently use source bridge addresses
+172.20.0.2 and 172.20.0.3. The relay pre-start guard checks their identities and
+fails closed if a later recreate changes them. Before recreating either source
+exporter, stop the relay, reconcile these addresses and update both the guard
+and forwarding targets, then restart and verify the exporter labels. These
+addresses are operational bindings, not automatically discovered stable IDs.
+
 | Destination private socket | Source reached through con |
 | --- | --- |
 | 172.23.0.1:19110 | con node-exporter |

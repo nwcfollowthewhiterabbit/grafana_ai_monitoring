@@ -5,6 +5,7 @@ After=network-online.target docker.service
 
 [Service]
 Type=simple
+ExecStartPre=/bin/sh /usr/local/libexec/rabbit-monitoring/verify-con-relay-targets.sh
 ExecStart=/usr/bin/ssh -NT -F /dev/null -i /etc/rabbit-monitoring-relay/id_ed25519 -o UserKnownHostsFile=/etc/rabbit-monitoring-relay/known_hosts -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -L 127.0.0.1:19090:127.0.0.1:9090 -L 127.0.0.1:13100:127.0.0.1:3100 -L 127.0.0.1:13000:127.0.0.1:3000 -R 172.23.0.1:19110:172.20.0.2:9100 -R 172.23.0.1:19111:172.20.0.3:8080 -R 172.23.0.1:19100:172.17.0.1:19100 -R 172.23.0.1:19101:172.17.0.1:19101 -R 172.23.0.1:19116:172.17.0.1:9116 -R 172.23.0.1:19120:141.94.121.160:9100 -R 172.23.0.1:19182:192.168.112.20:9182 -R 172.23.0.1:19183:192.168.112.19:9182 monitoring-relay@169.58.132.8
 Restart=always
 RestartSec=5

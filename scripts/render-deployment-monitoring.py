@@ -56,7 +56,8 @@ def main():
     for name in ("rules", "file_sd"):
         shutil.copytree(source / "prometheus" / name, output / name, dirs_exist_ok=True)
     # Preserve existing datasource credentials/provisioning outside dashboards.
-    shutil.copytree(source / "grafana/provisioning/dashboards", args.output / "grafana/provisioning/dashboards", dirs_exist_ok=True)
+    for name in ("dashboards", "company-dashboards"):
+        shutil.copytree(source / "grafana/provisioning" / name, args.output / "grafana/provisioning" / name, dirs_exist_ok=True)
     print("Rendered deployment scrape transport, reviewed rules and dashboards; credentials untouched")
 
 if __name__ == "__main__":
