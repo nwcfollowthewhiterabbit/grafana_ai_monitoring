@@ -610,10 +610,53 @@ companies:
             runbook: null
             monitoring: *pending_discovery_monitoring
             components: []
+      - id: deployment
+        alias: deployment
+        display_name: Rabbit Systems deployment and control server
+        role: monitoring_and_platform
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: docs/deployments/deployment-production-2026-09-08.md
+        monitoring: *server_monitoring
+        applications:
+          - id: monitoring
+            stack: monitoring
+            display_name: Managed monitoring central services
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: *monitoring_repository
+            runbook: docs/deployments/deployment-production-2026-09-08.md
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: prometheus, service: prometheus, display_name: Prometheus, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: grafana, service: grafana, display_name: Grafana, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: loki, service: loki, display_name: Loki, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: alertmanager, service: alertmanager, display_name: Alertmanager, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: incident-gateway, service: incident-gateway, display_name: Incident gateway, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: blackbox, service: blackbox, display_name: Blackbox exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: prom-label-proxy-greenleaf, service: prom-label-proxy-greenleaf, display_name: Greenleaf scoped query proxy, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: node-exporter-deployment, service: node-exporter-deployment, display_name: Node exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: cadvisor-deployment, service: cadvisor-deployment, display_name: cAdvisor, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: rabbit-platform-dev
+            stack: rabbit-platform-dev
+            display_name: Rabbit Platform pilot
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: platform, service: platform, display_name: API and UI, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: worker, service: worker, display_name: Worker, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: database, service: database, display_name: PostgreSQL, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
       - id: con
         alias: con
-        display_name: Rabbit Systems monitoring server
-        role: monitoring_and_openclaw
+        display_name: Rabbit Systems applications and collector relay
+        role: applications_and_monitoring_relay
         status: active
         owners: *provider_owners
         customer_visible: false
@@ -623,7 +666,7 @@ companies:
         applications:
           - id: monitoring
             stack: monitoring
-            display_name: Managed monitoring platform
+            display_name: Retained con monitoring collectors
             status: active
             owners: *provider_owners
             customer_visible: false
@@ -631,16 +674,9 @@ companies:
             runbook: null
             monitoring: *runtime_application_monitoring
             components:
-              - {id: blackbox, service: blackbox, display_name: Blackbox exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: cadvisor-con, service: cadvisor-con, display_name: cAdvisor, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: grafana, service: grafana, display_name: Grafana, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: loki, service: loki, display_name: Loki, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: node-exporter-con, service: node-exporter-con, display_name: Node exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: prom-label-proxy-greenleaf, service: prom-label-proxy-greenleaf, display_name: Greenleaf Prometheus label proxy, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: prometheus, service: prometheus, display_name: Prometheus, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
               - {id: snmp-exporter, service: snmp-exporter, display_name: SNMP exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: alertmanager, service: alertmanager, display_name: Alertmanager, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
-              - {id: incident-gateway, service: incident-gateway, display_name: Incident gateway, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
           - id: monitoring-promtail
             stack: monitoring-promtail
             display_name: Standalone Promtail
@@ -767,7 +803,10 @@ nodes:
     network: nat_reverse_tunnel
   - alias: con
     company: my own
-    role: monitoring_and_openclaw
+    role: applications_and_monitoring_relay
+  - alias: deployment
+    company: my own
+    role: monitoring_and_platform
   - alias: payroll
     company: rentall
     role: production
