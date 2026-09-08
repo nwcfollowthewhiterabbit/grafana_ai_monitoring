@@ -98,7 +98,7 @@ class ServerOwnershipTests(unittest.TestCase):
 	def test_how_renames_presentation_without_renaming_legacy_identity(self):
 		how = self.companies["rentall"]
 		self.assertEqual(how["label"], "rentall")
-		self.assertEqual(how["display_name"], "HOW")
+		self.assertEqual(how["display_name"], "HOW Production")
 		self.assertNotIn("how", self.companies)
 		for alias in ("howbot", "payroll"):
 			self.assertIn("HOW", self.servers[("rentall", alias)]["display_name"])

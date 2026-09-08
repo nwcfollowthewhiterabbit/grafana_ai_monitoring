@@ -1,6 +1,6 @@
 # Owner-confirmed server classification — 2026-09-08
 
-Status: catalog implemented and locally validated; live application pending.
+Status: applied on deployment and verified through Prometheus on 2026-09-08.
 
 ## Scope
 
@@ -16,7 +16,8 @@ Grafana is its presentation, not a second source of ownership decisions.
   must not be inferred from one another.
 - SeedQuest: newly registered `seedquest`, customer production.
 - MB Skolas: newly registered `wherp`, customer ERP production.
-- HOW: existing `howbot`/`payroll` production. Catalog display names corrected;
+- HOW Production (owner explicitly confirmed this is `rentall`): existing
+  `howbot`/`payroll` production. Catalog display names corrected;
   stable ID and metric label `rentall` remain unchanged. This does not rename
   other legacy Rentall/Windows/VPN resources or establish their legal ownership.
 
@@ -42,7 +43,27 @@ with similarly named hosts.
   absent; containerized checks are **not_run** locally, not a claimed pass.
 - Generated HTTP target file: **unchanged**, renderer `--check` passed.
 - `git diff --check`: **passed**.
-- Live application and Prometheus readback: **not_run** at this checkpoint.
+- Full [CI for f0d4a26](https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/actions/runs/34270524643):
+  **passed**, including Docker configuration, promtool rule fixtures and amtool.
+- Live catalog application: **passed**, `f0d4a268c612987938498d84f7e9882b1ca79327`
+  fast-forwarded from clean `54a725aa925679dd6c3f98c9de6c9f0b33540392` after exact
+  four-file change-set verification. Existing service-event generator exited 0
+  at `2026-09-08T19:44:21Z`; textfile mode remains `0644`.
+- Prometheus readback: **12** inventory servers; `con2`, `voice`, `seedquest`,
+  `wherp` all **UNKNOWN (-1)**; generator self-check valid=1.
+- All **36** scrape target identities unchanged (sorted-label SHA-256
+  `6d258297d6cf787ae488cb7d3e1c94ea126e10bdca6fd7d72d08babd4ab9bad6`).
+  **38** runtime configuration/provisioning files retained exact checksums.
+  Prometheus, Grafana, Alertmanager, incident gateway and Greenleaf proxy retained
+  start times and zero restarts. No alert rule, datasource or credential changed.
+- Backup: `/var/backups/rabbit-monitoring-v2/server-ownership-20260908-f0d4a26/service-catalog.before.yml`,
+  retained under mode `0700` directory. Runtime readback's final shell `rg` count
+  was unavailable on the host; the authoritative Prometheus API count above was
+  verified separately, without repeating the apply.
+
+The owner's subsequent name clarification changes display metadata from HOW
+to **HOW Production**; metric IDs/labels remain `rentall`. Live application of
+that display-only follow-up is recorded after verification.
 
 ## Bounded application
 

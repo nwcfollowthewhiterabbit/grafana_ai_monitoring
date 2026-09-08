@@ -388,9 +388,9 @@ companies:
 
   - id: rentall
     label: rentall
-    # Owner confirmed HOW for howbot/payroll on 2026-09-08. Preserve the
+    # Owner confirmed HOW Production for howbot/payroll on 2026-09-08. Preserve the
     # historical ID/metric label; this is not a tenant/ACL or TSDB migration.
-    display_name: HOW
+    display_name: HOW Production
     owners: *provider_owners
     customer_visible: true
     repository: *monitoring_repository
@@ -399,7 +399,7 @@ companies:
     servers:
       - id: payroll
         alias: payroll
-        display_name: HOW payroll production server
+        display_name: HOW Production payroll server
         role: production
         status: active
         owners: *provider_owners
@@ -423,7 +423,7 @@ companies:
               - {id: payroll-bot, service: payroll-bot, display_name: Payroll bot, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: &runtime_component_monitoring {enabled: true, signals: [containers, logs]}}
       - id: howbot
         alias: howbot
-        display_name: HOW bot production server
+        display_name: HOW Production bot server
         role: production
         status: active
         owners: *provider_owners

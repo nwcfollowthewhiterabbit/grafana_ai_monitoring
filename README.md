@@ -62,7 +62,7 @@ scrape targets; registration is not proof of health.
 | Company ID | Server IDs |
 | --- | --- |
 | greenleaf | cloud, testing, new |
-| rentall (display name: HOW; historical metric label retained) | payroll, howbot |
+| rentall (display name: HOW Production; historical metric label retained) | payroll, howbot |
 | my-own | test, con, deployment, con2, voice |
 | seedquest | seedquest |
 | mb-skolas | wherp |
