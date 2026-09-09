@@ -6,11 +6,13 @@ retention and credentials remain customer-owned on `cloud`.
 
 ## Deployment status
 
-- Customer collectors and the existing metrics-service drop-in have been
-  installed on `cloud`; end-to-end native exporter/Prometheus verification is
-  still pending at this record's creation.
-- The central rules, dedicated network attachment and platform read-only view
-  are prepared in source. **Central/platform production activation is pending.**
+- Customer collectors and the existing metrics-service drop-in are installed
+  on `cloud`; native exporter and central Prometheus ingestion were verified
+  on 2026-09-09 UTC with successful collection and no textfile parsing error.
+- Central rules passed isolated Prometheus 3.4.0 fixtures and full runtime
+  `promtool check config`, then were loaded with HUP. The company proxy is on
+  dedicated internal network `rabbit_backup_observations`. Platform activation
+  is recorded separately in its release report, not inferred from source.
 - Existing Keycloak backup and isolated database restore evidence is described
   in `greenleaf_cloud-server/docs/services/keycloak-sso.md`. Full application
   recovery is **not verified**; a restored database is not a tested login.
@@ -45,6 +47,9 @@ the wrong directory does not establish scrape visibility. The customer repo is
 authoritative for installed collectors; this repo's older
 `scripts/cloud-backup-metrics.sh` and `docs/cloud-backup-inspection.md` describe
 legacy behavior and must not overwrite the current source.
+
+Coverage excludes Nextcloud's separately located backup source outside the
+stack directory. No Nextcloud backup-health claim is made by these observations.
 
 ## Trust and verification levels
 
