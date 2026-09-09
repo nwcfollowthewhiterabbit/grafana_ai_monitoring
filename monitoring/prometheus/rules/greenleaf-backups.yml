@@ -1,0 +1,202 @@
+# Metadata-only monitoring; customer backup schedules and payloads stay on cloud.
+groups:
+  - name: greenleaf_backup_observations
+    interval: 1m
+    rules:
+      - record: rs_greenleaf_backup_telemetry_fresh
+        expr: |
+          (max by(company,alias) (node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file=~".*/greenleaf-backups.prom"}) > time() - 900)
+          and on(company,alias) (max by(company,alias) (node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file=~".*/greenleaf-backups.prom"}) <= time() + 60)
+          and on(company,alias) (max by(company,alias) (up{company="greenleaf",alias="cloud",job="node_exporter_clients"}) == 1)
+          and on(company,alias) (max by(company,alias) (node_textfile_scrape_error{company="greenleaf",alias="cloud"}) == 0)
+      - record: rs_greenleaf_sso_backup_telemetry_fresh
+        expr: |
+          (max by(company,alias) (greenleaf_sso_backup_collector_timestamp_seconds{company="greenleaf",alias="cloud"}) > time() - 900)
+          and on(company,alias) (max by(company,alias) (greenleaf_sso_backup_collector_timestamp_seconds{company="greenleaf",alias="cloud"}) <= time() + 60)
+          and on(company,alias) (max by(company,alias) (greenleaf_sso_backup_collector_success{company="greenleaf",alias="cloud"}) == 1)
+          and on(company,alias) (max by(company,alias) (up{company="greenleaf",alias="cloud",job="node_exporter_clients"}) == 1)
+          and on(company,alias) (max by(company,alias) (node_textfile_scrape_error{company="greenleaf",alias="cloud"}) == 0)
+      - alert: CloudBackupMountUnhealthy
+        expr: |
+          (max by(company,alias) (greenleaf_backup_mount_healthy{company="greenleaf",alias="cloud"}) == 0) and on(company,alias) rs_greenleaf_backup_telemetry_fresh
+        for: 30m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: backups
+          service: object-storage-mount
+          category: backup
+          notification_route: admin
+          severity: warning
+        annotations:
+          summary: "Backup browse mount is unavailable; direct uploads are independent"
+          description: "The FUSE browse mount failed. This alone does not prove that direct Wasabi backups failed."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudBackupMetricsMissing
+        expr: |
+          absent(rs_greenleaf_backup_telemetry_fresh{company="greenleaf",alias="cloud"})
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: backups
+          service: backup-metrics
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Backup observations are missing or stale"
+          description: "The collector file is missing, older than 15 minutes, future-dated, or node_exporter reports a textfile parse error."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudERPBackupStale
+        expr: |
+          max by(company,alias) (
+          (
+            (time() - greenleaf_backup_erp_operational_local_latest_timestamp_seconds{company="greenleaf",alias="cloud"} > 25200)
+            or (greenleaf_backup_erp_operational_local_latest_timestamp_seconds{company="greenleaf",alias="cloud"} == 0)
+            or (greenleaf_backup_erp_operational_local_manifest_present{company="greenleaf",alias="cloud"} != 1)
+            or (greenleaf_backup_erp_operational_local_archive_bytes{company="greenleaf",alias="cloud"} <= 0)
+            or absent(greenleaf_backup_erp_operational_local_latest_timestamp_seconds{company="greenleaf",alias="cloud"})
+          )
+          or absent(rs_greenleaf_backup_telemetry_fresh{company="greenleaf",alias="cloud"})
+          or absent(greenleaf_backup_erp_operational_local_manifest_present{company="greenleaf",alias="cloud"})
+          or absent(greenleaf_backup_erp_operational_local_archive_bytes{company="greenleaf",alias="cloud"})
+          or (greenleaf_backup_erp_operational_local_latest_timestamp_seconds{company="greenleaf",alias="cloud"} > time() + 60)
+          )
+        for: 5m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: erpgreenleafpacificcom
+          service: backup-operational
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "ERP local operational backup is missing or older than seven hours"
+          description: "This is the six-hour LOCAL operational archive, not the daily off-host full copy. Presence does not establish restore validity."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudDailyStackBackupStale
+        expr: |
+          max by(company,alias,stack) (
+          (
+            (time() - greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} > 90000)
+            or (greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} == 0)
+            or (greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} != 1)
+            or (greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} <= 0)
+            or (greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} unless on(company,alias,stack) greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud"})
+          )
+          or (max_over_time(greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"}[2d]) unless on(company,alias) rs_greenleaf_backup_telemetry_fresh)
+          or (greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} > time() + 60)
+          or (greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} unless on(company,alias,stack) greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud"})
+          or (greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack!="sso.greenleafpacific.com"} unless on(company,alias,stack) greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud"})
+          )
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          service: backup
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Daily off-host archive is missing or older than 25 hours"
+          description: "All full stack archives, including ERP, follow the daily schedule. Listed objects are not checksum or restore verification."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudBackupTimerDisabled
+        expr: |
+          max by(company,alias,timer) ((greenleaf_backup_timer_enabled{company="greenleaf",alias="cloud"} == 0) or (max_over_time(greenleaf_backup_timer_enabled{company="greenleaf",alias="cloud"}[2d]) unless on(company,alias) rs_greenleaf_backup_telemetry_fresh))
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: backups
+          service: backup-schedule
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "A backup timer is not both enabled and active"
+          description: "Check the existing customer-owned systemd timer; monitoring does not change schedules."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudSSOBackupMetricsMissing
+        expr: |
+          absent(rs_greenleaf_sso_backup_telemetry_fresh{company="greenleaf",alias="cloud"})
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: sso.greenleafpacific.com
+          service: backup-metrics
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Keycloak backup observations are missing or invalid"
+          description: "No fresh successful metadata collector result; this is unknown backup state, not a claimed data loss."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudSSOBackupStale
+        expr: |
+          max by(company,alias) (
+          (
+            (time() - greenleaf_sso_backup_remote_verified_timestamp_seconds{company="greenleaf",alias="cloud"} > 90000)
+            or (greenleaf_sso_backup_remote_verified_timestamp_seconds{company="greenleaf",alias="cloud"} == 0)
+            or absent(greenleaf_sso_backup_remote_verified_timestamp_seconds{company="greenleaf",alias="cloud"})
+          )
+          or absent(rs_greenleaf_sso_backup_telemetry_fresh{company="greenleaf",alias="cloud"})
+          or (greenleaf_sso_backup_remote_verified_timestamp_seconds{company="greenleaf",alias="cloud"} > time() + 60)
+          )
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: sso.greenleafpacific.com
+          service: backup
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Keycloak verified off-host backup is missing or older than 25 hours"
+          description: "Based on the metadata receipt from the download-verified logical backup, not the existence of its directory."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudSSOBackupFailed
+        expr: |
+          max by(company,alias) ((greenleaf_sso_backup_last_run_success{company="greenleaf",alias="cloud"} == 0) or absent(rs_greenleaf_sso_backup_telemetry_fresh{company="greenleaf",alias="cloud"}))
+        for: 5m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: sso.greenleafpacific.com
+          service: backup
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Latest Keycloak backup run failed or evidence is unavailable"
+          description: "A previous valid backup does not hide a failed run. Missing telemetry keeps the condition open; inspect the observation alert."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"
+      - alert: CloudSSOBackupTimerDisabled
+        expr: |
+          max by(company,alias) ((greenleaf_sso_backup_timer_enabled{company="greenleaf",alias="cloud"} == 0) or absent(greenleaf_sso_backup_timer_enabled{company="greenleaf",alias="cloud"}) or absent(rs_greenleaf_sso_backup_telemetry_fresh{company="greenleaf",alias="cloud"}))
+        for: 10m
+        keep_firing_for: 5m
+        labels:
+          company: greenleaf
+          alias: cloud
+          stack: sso.greenleafpacific.com
+          service: backup-schedule
+          category: backup
+          notification_route: admin
+          severity: critical
+        annotations:
+          summary: "Keycloak backup timer is disabled or inactive"
+          description: "The expected daily backup timer must be both enabled and active."
+          runbook_url: "https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring/blob/main/docs/greenleaf-backup-monitoring.md"

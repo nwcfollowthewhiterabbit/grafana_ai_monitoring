@@ -62,6 +62,7 @@ services:
     container_name: monitoring-prom-label-proxy-greenleaf
     restart: unless-stopped
     command: [-label=company, -label-value=greenleaf, -upstream=http://prometheus:9090, -insecure-listen-address=0.0.0.0:8080, -enable-label-apis, -error-on-replace]
+    networks: [default, backup_observations]
   node-exporter-deployment:
     image: prom/node-exporter:v1.9.1
     pull_policy: never
@@ -87,6 +88,9 @@ services:
       - /dev/disk:/dev/disk:ro
 
 networks:
+  backup_observations:
+    external: true
+    name: rabbit_backup_observations
   default:
     external: true
     name: monitoring_default
