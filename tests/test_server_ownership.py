@@ -42,7 +42,7 @@ CONFIRMED_OWNERS = {
 	"howbot": "rentall",
 	"payroll": "rentall",
 }
-UNDISCOVERED_SERVERS = {"con2", "voice", "seedquest", "wherp"}
+UNDISCOVERED_SERVERS = {"seedquest", "wherp"}
 
 # A future workload migration must deliberately update this expectation; declaring
 # a destination for legacy sites is not evidence that they have moved there.
