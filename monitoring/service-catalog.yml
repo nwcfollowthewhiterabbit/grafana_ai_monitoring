@@ -539,6 +539,9 @@ companies:
       # Registration must not create targets or imply that a host is healthy.
       - id: con2
         alias: con2
+        provider_binding:
+          account_ref: contabo-primary
+          instance_id: "203455907"
         display_name: Rabbit Systems con2 infrastructure server
         role: infrastructure
         status: pending_discovery
@@ -550,6 +553,9 @@ companies:
         applications: []
       - id: voice
         alias: voice
+        provider_binding:
+          account_ref: contabo-primary
+          instance_id: "203404301"
         display_name: Rabbit Systems voice infrastructure server
         role: infrastructure
         status: pending_discovery
