@@ -1,0 +1,169 @@
+- targets:
+  - https://bulataxi.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: bulataxicom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: bulataxicom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://cgi.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: cgigreenleafpacificcom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: cgigreenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://erp.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: erpgreenleafpacificcom
+    service: frontend
+    criticality: critical
+    company_id: greenleaf
+    server_id: cloud
+    application_id: erpgreenleafpacificcom
+    component_id: frontend
+    customer_visible: 'true'
+- targets:
+  - https://fiji.pacific.cleaning
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: fijipacificcleaning
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: fijipacificcleaning
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://furniture.com.fj
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: furniturecomfj
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: furniturecomfj
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: greenleafpacificcom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: greenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://cloud.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: nextcloud-docker
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: nextcloud-docker
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://pacific.cleaning
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: pacificcleaning
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: pacificcleaning
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://sg.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: sggreenleafpacificcom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: sggreenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://spa.com.fj
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: spacomfj
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: cloud
+    application_id: spacomfj
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://testing2.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: testing2greenleafpacificcom
+    service: app
+    criticality: medium
+    company_id: greenleaf
+    server_id: cloud
+    application_id: testing2greenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://testing.erp.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: testingerpgreenleafpacificcom
+    service: frontend
+    criticality: medium
+    company_id: greenleaf
+    server_id: cloud
+    application_id: testingerpgreenleafpacificcom
+    component_id: frontend
+    customer_visible: 'true'
+- targets:
+  - https://testing.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: cloud
+    stack: testinggreenleafpacificcom
+    service: app
+    criticality: medium
+    company_id: greenleaf
+    server_id: cloud
+    application_id: testinggreenleafpacificcom
+    component_id: app
+    customer_visible: 'true'

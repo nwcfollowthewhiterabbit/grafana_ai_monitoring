@@ -83,13 +83,20 @@ docker restart monitoring-grafana
 
 ## Alerts
 
-Provisioned Grafana rules:
+Production rules are evaluated by Prometheus from
+`monitoring/prometheus/rules/platform-alerts.yml` and delivered through
+Alertmanager plus the incident gateway:
 
-- `windows-exporter-down`: exporter unreachable for 5 minutes.
-- `windows-watched-service-down`: configured service missing or not running for 2 minutes.
-- `windows-hyperv-vm-not-running`: discovered Hyper-V VM not in `Running` state for 5 minutes.
-- `windows-backup-path-unavailable`: backup path cannot be listed for 30 minutes.
-- `windows-backup-stale`: watched backup path has no new files for 25 hours.
+- `WindowsExporterDown`: exporter unreachable for 5 minutes.
+- `WindowsWatchedServiceDown`: configured service missing or not running for 2 minutes.
+- `WindowsHyperVVMNotRunning`: discovered Hyper-V VM not in `Running` state for 5 minutes.
+- `WindowsBackupPathUnavailable`: backup path cannot be listed for 30 minutes.
+- `WindowsBackupStale`: watched backup path has no new files for 25 hours.
+
+The legacy Grafana/OpenClaw route is retained but paused while the gateway is the
+authoritative sender. `workspace=rentoll` in the target examples is legacy
+compatibility metadata; v2 routing uses `company`, `alias`, `stack` and
+`service`.
 
 Rentall host notes:
 

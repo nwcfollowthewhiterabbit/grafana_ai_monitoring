@@ -1,0 +1,131 @@
+name: rabbit-monitoring-v2-shadow
+
+# Shadow deployment for a checkout at /opt/rabbit-monitoring-v2. Persistent
+# state is deliberately isolated from the current /var/lib/monitoring stack.
+# Pre-create the two data directories with owners 10001:10001 (gateway) and
+# 65534:65534 (Alertmanager); create_host_path=false prevents silent root-owned
+# directory creation.
+services:
+  incident-gateway:
+    image: rabbitsystems/incident-gateway:0.1.0
+    build:
+      context: ../services/incident-gateway
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    environment:
+      GATEWAY_MODE: ${INCIDENT_GATEWAY_MODE:-shadow}
+      GATEWAY_DATABASE_PATH: /var/lib/incident-gateway/incidents.db
+      TELEGRAM_BOT_TOKEN_FILE: ${TELEGRAM_BOT_TOKEN_FILE:-}
+      TELEGRAM_CHAT_ID_FILE: ${TELEGRAM_CHAT_ID_FILE:-}
+      TELEGRAM_MESSAGE_THREAD_ID: ${TELEGRAM_MESSAGE_THREAD_ID:-}
+      TELEGRAM_MESSAGE_THREAD_ID_FILE: ${TELEGRAM_MESSAGE_THREAD_ID_FILE:-}
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - type: bind
+        source: ${RABBIT_MONITORING_V2_DATA_ROOT:-/var/lib/rabbit-monitoring-v2}/incident-gateway
+        target: /var/lib/incident-gateway
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ../monitoring/secrets
+        target: /run/secrets
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2).read()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 192m
+    cpus: 0.50
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    networks:
+      monitoring:
+        aliases:
+          - incident-gateway
+
+  alertmanager:
+    image: quay.io/prometheus/alertmanager:v0.33.1
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --data.retention=120h
+      - --web.listen-address=0.0.0.0:9093
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - type: bind
+        source: ../monitoring/alertmanager/alertmanager.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${RABBIT_MONITORING_V2_DATA_ROOT:-/var/lib/rabbit-monitoring-v2}/alertmanager
+        target: /alertmanager
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.50
+    healthcheck:
+      test:
+        - CMD
+        - /bin/amtool
+        - --alertmanager.url=http://127.0.0.1:9093
+        - config
+        - show
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      incident-gateway:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+    networks:
+      monitoring:
+        aliases:
+          - alertmanager
+
+networks:
+  monitoring:
+    external: true
+    name: monitoring_default

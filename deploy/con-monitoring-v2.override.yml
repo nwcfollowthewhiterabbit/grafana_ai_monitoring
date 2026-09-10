@@ -1,0 +1,132 @@
+# Add only Alertmanager and the incident gateway to the existing `monitoring`
+# Compose project on con. Always pass `/root/monitoring/docker-compose.yml`
+# first and use `--project-name monitoring`; this file deliberately has no
+# top-level project name and defines none of the existing stack services.
+#
+# The gateway image must be staged and verified before deployment. There is no
+# build section, and pull_policy=never prevents an implicit registry change.
+services:
+  incident-gateway:
+    image: rabbitsystems/incident-gateway:0.1.0
+    pull_policy: never
+    container_name: monitoring-incident-gateway
+    restart: unless-stopped
+    init: true
+    user: "10001:10001"
+    stop_grace_period: 30s
+    environment:
+      GATEWAY_MODE: shadow
+      GATEWAY_DATABASE_PATH: /var/lib/incident-gateway/incidents.db
+      TELEGRAM_BOT_TOKEN_FILE: /run/secrets/telegram_bot_token
+      TELEGRAM_CHAT_ID_FILE: /run/secrets/telegram_chat_id
+      TELEGRAM_MESSAGE_THREAD_ID_FILE: /run/secrets/telegram_thread_id
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - type: bind
+        source: /var/lib/rabbit-monitoring-v2/incident-gateway
+        target: /var/lib/incident-gateway
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /opt/rabbit-monitoring-v2/monitoring/secrets/telegram_bot_token
+        target: /run/secrets/telegram_bot_token
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /opt/rabbit-monitoring-v2/monitoring/secrets/telegram_chat_id
+        target: /run/secrets/telegram_chat_id
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /opt/rabbit-monitoring-v2/monitoring/secrets/telegram_thread_id
+        target: /run/secrets/telegram_thread_id
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/readyz', timeout=2).read()
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 192m
+    cpus: 0.50
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"
+
+  alertmanager:
+    image: quay.io/prometheus/alertmanager:v0.33.1
+    pull_policy: never
+    container_name: monitoring-alertmanager
+    restart: unless-stopped
+    init: true
+    user: "65534:65534"
+    stop_grace_period: 30s
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --data.retention=120h
+      - --web.listen-address=0.0.0.0:9093
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - type: bind
+        source: /opt/rabbit-monitoring-v2/monitoring/alertmanager/alertmanager.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: /var/lib/rabbit-monitoring-v2/alertmanager
+        target: /alertmanager
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    healthcheck:
+      test:
+        - CMD
+        - /bin/amtool
+        - --alertmanager.url=http://127.0.0.1:9093
+        - config
+        - show
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      incident-gateway:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.50
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+        compress: "true"

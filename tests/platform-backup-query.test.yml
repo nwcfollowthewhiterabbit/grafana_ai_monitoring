@@ -1,0 +1,45 @@
+# Evaluate the platform's metric union in real PromQL, not mocked HTTP JSON.
+# Default `or` ignores __name__: up and textfile error have identical labels,
+# so the old expression retained only up (count 1). Match on metric name.
+rule_files: []
+evaluation_interval: 1m
+
+tests:
+  - name: Platform backup query retains distinct metric names with identical scrape labels
+    interval: 1m
+    input_series:
+      - series: 'up{job="node_exporter_clients",instance="139.99.155.118:9100",company="greenleaf",alias="cloud"}'
+        values: 1x5
+      - series: 'node_textfile_scrape_error{job="node_exporter_clients",instance="139.99.155.118:9100",company="greenleaf",alias="cloud"}'
+        values: 0x5
+      - series: 'node_textfile_mtime_seconds{job="node_exporter_clients",instance="139.99.155.118:9100",company="greenleaf",alias="cloud",file="/var/lib/prometheus/node-exporter/greenleaf-backups.prom"}'
+        values: 0+60x5
+      - series: 'greenleaf_sso_backup_collector_success{job="node_exporter_clients",instance="139.99.155.118:9100",company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x5
+    promql_expr_test:
+      - expr: |
+          count(
+            up{job="node_exporter_clients",company="greenleaf",alias="cloud"}
+            or on(__name__)
+            node_textfile_scrape_error{job="node_exporter_clients",company="greenleaf",alias="cloud"}
+          )
+        eval_time: 5m
+        exp_samples:
+          - labels: '{}'
+            value: 2
+      - expr: |
+          count(
+            {__name__=~"greenleaf_backup_stack_configured|greenleaf_backup_stack_local_latest_timestamp_seconds|greenleaf_backup_stack_remote_latest_timestamp_seconds|greenleaf_backup_stack_local_manifest_present|greenleaf_backup_stack_remote_manifest_present|greenleaf_backup_stack_local_archive_bytes|greenleaf_backup_stack_remote_archive_bytes|greenleaf_backup_erp_operational_local_latest_timestamp_seconds|greenleaf_backup_erp_operational_local_manifest_present|greenleaf_backup_erp_operational_local_archive_bytes|greenleaf_backup_timer_enabled",company="greenleaf",alias="cloud"}
+            or on(__name__)
+            {__name__=~"greenleaf_sso_backup_local_latest_timestamp_seconds|greenleaf_sso_backup_remote_verified_timestamp_seconds|greenleaf_sso_backup_database_restore_timestamp_seconds|greenleaf_sso_backup_application_restore_timestamp_seconds|greenleaf_sso_backup_collector_timestamp_seconds|greenleaf_sso_backup_collector_success|greenleaf_sso_backup_timer_enabled|greenleaf_sso_backup_last_run_success|greenleaf_sso_backup_running",company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}
+            or on(__name__)
+            node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file=~"(.*/)?greenleaf-backups[.]prom"}
+            or on(__name__)
+            up{job="node_exporter_clients",company="greenleaf",alias="cloud"}
+            or on(__name__)
+            node_textfile_scrape_error{job="node_exporter_clients",company="greenleaf",alias="cloud"}
+          )
+        eval_time: 5m
+        exp_samples:
+          - labels: '{}'
+            value: 4

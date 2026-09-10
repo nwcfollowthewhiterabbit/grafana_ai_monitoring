@@ -1,0 +1,6 @@
+# Opt-in live delivery layer. Omitting this file is always shadow mode.
+# Use only after the canary and cutover gates in the runbook pass.
+services:
+  incident-gateway:
+    environment:
+      GATEWAY_MODE: live

@@ -139,7 +139,8 @@ The current production monitoring watches existing backup signals where they are
 - expose M.E.Doc and 1C backup freshness, size, exit status and destination availability as Prometheus metrics;
 - configure VM-level backups on the Hyper-V host `192.168.112.20` for both VMs: `192.168.112.19` and `192.168.112.1`;
 - expose Hyper-V VM backup freshness, last result, backup size and storage free space as Prometheus metrics;
-- add Grafana panels and alerts after the backup jobs and metric files are stable.
+- add Grafana panels and Prometheus/Alertmanager rules after the backup jobs and
+  metric files are stable.
 
 ## MikroTik Monitoring
 
@@ -240,28 +241,35 @@ https://grafana.exemstsc.world/d/mikrotik-router/mikrotik-router
 
 ## Alerts
 
-Grafana alert rules are provisioned in:
+Production alert rules are evaluated by Prometheus from:
 
 ```text
-monitoring/grafana/provisioning/alerting/immediate-infrastructure-alerts.yml
+monitoring/prometheus/rules/platform-alerts.yml
 ```
 
 Relevant Windows rules:
 
-- `windows-exporter-down`: `windows_exporter` cannot be scraped;
-- `windows-watched-service-down`: a watched Windows service is missing or not running;
-- `windows-hyperv-vm-not-running`: a discovered Hyper-V VM is not running;
-- `windows-backup-path-unavailable`: watched backup path cannot be listed for 30 minutes;
-- `windows-backup-stale`: watched backup path has no new files for the configured stale window.
+- `WindowsExporterDown`: `windows_exporter` cannot be scraped;
+- `WindowsWatchedServiceDown`: a watched Windows service is missing or not running;
+- `WindowsHyperVVMNotRunning`: a discovered Hyper-V VM is not running;
+- `WindowsBackupPathUnavailable`: watched backup path cannot be listed for 30 minutes;
+- `WindowsBackupStale`: watched backup path has no new files for the configured stale window.
 
-Alert routing uses labels such as:
+Alertmanager sends these incidents to the stateful gateway. The canonical
+routing/scoping labels are:
 
 ```text
-workspace=rentoll
 company=rentall
 alias=rentall-hyperv
 alias=rentall-rdp
+stack=host|windows|hyperv|backups
+service=<rule-specific component>
 ```
+
+The existing `workspace=rentoll` target label is legacy compatibility metadata,
+not a Managed Monitoring v2 notification route. Grafana-managed rules and their
+OpenClaw path remain configured only for rollback; OpenClaw processing is paused
+while the gateway is authoritative.
 
 ## Operational Checks
 

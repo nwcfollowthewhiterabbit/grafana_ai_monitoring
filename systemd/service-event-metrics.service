@@ -1,0 +1,21 @@
+[Unit]
+Description=Rabbit Systems service-event deadline metrics
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/rabbit-monitoring-v2
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/rabbit-monitoring-v2/scripts/service-event-metrics.py --catalog /opt/rabbit-monitoring-v2/monitoring/service-catalog.yml --output /var/lib/node-exporter-textfile/service-events.prom --self-output /var/lib/node-exporter-textfile/service-event-metrics-self.prom
+StateDirectory=rabbit-monitoring-v2/checkers
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/node-exporter-textfile /var/lib/rabbit-monitoring-v2/checkers
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX

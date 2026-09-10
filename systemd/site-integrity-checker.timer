@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Rabbit Systems public-site integrity checks twice daily
+
+[Timer]
+OnCalendar=*-*-* 02,14:15:00
+RandomizedDelaySec=15m
+AccuracySec=1m
+Persistent=true
+Unit=site-integrity-checker.service
+
+[Install]
+WantedBy=timers.target

@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 labels:
   required:
@@ -11,6 +11,870 @@ labels:
     - greenleaf
     - rentall
     - my own
+    - seedquest
+    - mb-skolas
+
+# Canonical source of truth. The legacy sections below remain available during
+# migration and are checked against this hierarchy by the catalog validator.
+owners:
+  - id: rabbit-systems-ops
+    display_name: Rabbit Systems Operations
+    kind: provider
+
+companies:
+  - id: greenleaf
+    label: greenleaf
+    display_name: Greenleaf
+    owners: &provider_owners [rabbit-systems-ops]
+    customer_visible: true
+    repository: &monitoring_repository https://github.com/nwcfollowthewhiterabbit/grafana_ai_monitoring
+    runbook: &greenleaf_public_runbook docs/greenleaf-public-monitoring.md
+    monitoring: &company_monitoring
+      enabled: true
+      signals: [node, containers, availability, integrity, backups, service_events]
+    servers:
+      - id: cloud
+        alias: cloud
+        ipv4: 139.99.155.118
+        display_name: Greenleaf production server
+        role: production
+        status: active
+        owners: *provider_owners
+        customer_visible: true
+        repository: *monitoring_repository
+        runbook: *greenleaf_public_runbook
+        monitoring: &server_monitoring
+          enabled: true
+          signals: [node, containers, logs, backups, service_events]
+        applications:
+          - id: nextcloud-docker
+            stack: nextcloud-docker
+            display_name: Greenleaf Cloud
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: &public_application_monitoring
+              enabled: true
+              signals: [containers, availability, integrity]
+              availability_interval_seconds: 15
+              integrity_interval_seconds: 43200
+              retry_count: 3
+              retry_interval_seconds: 300
+              failure_threshold: 3
+              consecutive_bad_cycles: 2
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: &public_component_monitoring
+                  enabled: true
+                  signals: [availability, integrity]
+                  availability_interval_seconds: 15
+                  integrity_interval_seconds: 43200
+                  retry_count: 3
+                  retry_interval_seconds: 300
+                  failure_threshold: 3
+                  consecutive_bad_cycles: 2
+          - id: greenleafpacificcom
+            stack: greenleafpacificcom
+            display_name: greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: erpgreenleafpacificcom
+            stack: erpgreenleafpacificcom
+            display_name: Greenleaf ERP
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: frontend
+                service: frontend
+                display_name: Public frontend
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: cgigreenleafpacificcom
+            stack: cgigreenleafpacificcom
+            display_name: cgi.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: sggreenleafpacificcom
+            stack: sggreenleafpacificcom
+            display_name: sg.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: spacomfj
+            stack: spacomfj
+            display_name: spa.com.fj
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: furniturecomfj
+            stack: furniturecomfj
+            display_name: furniture.com.fj
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: pacificcleaning
+            stack: pacificcleaning
+            display_name: pacific.cleaning
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: fijipacificcleaning
+            stack: fijipacificcleaning
+            display_name: fiji.pacific.cleaning
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: testingerpgreenleafpacificcom
+            stack: testingerpgreenleafpacificcom
+            display_name: testing.erp.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: frontend
+                service: frontend
+                display_name: Public frontend
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: testinggreenleafpacificcom
+            stack: testinggreenleafpacificcom
+            display_name: testing.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: testing2greenleafpacificcom
+            stack: testing2greenleafpacificcom
+            display_name: testing2.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: bulataxicom
+            stack: bulataxicom
+            display_name: bulataxi.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: beautylabspacomfj
+            stack: beautylabspacomfj
+            display_name: beautylabspacomfj
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: &pending_discovery_monitoring
+              enabled: false
+              signals: []
+            components: []
+          - id: trexfijicom
+            stack: trexfijicom
+            display_name: trexfijicom
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+      - id: testing
+        alias: testing
+        ipv4: 139.99.155.122
+        display_name: Greenleaf test server
+        # Existing technical role retained. Owner intends a future migration
+        # of outdated websites here; no application placement changes yet.
+        role: staging
+        status: active
+        owners: *provider_owners
+        customer_visible: true
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *server_monitoring
+        applications:
+          - id: company-monitor
+            stack: company-monitor
+            display_name: company-monitor
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: pterodactyl
+            stack: pterodactyl
+            display_name: pterodactyl
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: wordpress
+            stack: wordpress
+            display_name: wordpress
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+      - id: new
+        alias: new
+        ipv4: 139.99.171.55
+        display_name: Greenleaf pending server
+        role: production
+        status: pending_access
+        owners: *provider_owners
+        customer_visible: true
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
+
+  - id: rentall
+    label: rentall
+    # Owner confirmed HOW Production for howbot/payroll on 2026-09-08. Preserve the
+    # historical ID/metric label; this is not a tenant/ACL or TSDB migration.
+    display_name: HOW Production
+    owners: *provider_owners
+    customer_visible: true
+    repository: *monitoring_repository
+    runbook: null
+    monitoring: *company_monitoring
+    servers:
+      - id: payroll
+        alias: payroll
+        ipv4: 64.227.115.196
+        display_name: HOW Production payroll server
+        role: production
+        status: active
+        owners: *provider_owners
+        customer_visible: true
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *server_monitoring
+        applications:
+          - id: payrollbot21
+            stack: payrollbot21
+            display_name: payrollbot21
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: &runtime_application_monitoring
+              enabled: true
+              signals: [containers, logs]
+            components:
+              - {id: payroll-bot, service: payroll-bot, display_name: Payroll bot, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: &runtime_component_monitoring {enabled: true, signals: [containers, logs]}}
+      - id: howbot
+        alias: howbot
+        ipv4: 141.94.121.160
+        display_name: HOW Production bot server
+        role: production
+        status: active
+        owners: *provider_owners
+        customer_visible: true
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *server_monitoring
+        applications:
+          - id: howprod
+            stack: howprod
+            display_name: howprod
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: assistant, service: assistant, display_name: Assistant, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: bot, service: bot, display_name: Bot, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: chromadb, service: chromadb, display_name: ChromaDB, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: openclaw, service: openclaw, display_name: OpenClaw, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: how-team
+            stack: how-team
+            display_name: HOW Team
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: app, service: app, display_name: Application, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: clamav, service: clamav, display_name: ClamAV, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: db, service: db, display_name: Database, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: worker, service: worker, display_name: Worker, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: how-team-monitoring
+            stack: how-team-monitoring
+            display_name: HOW Team monitoring
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: alertmanager, service: alertmanager, display_name: Alertmanager, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: prometheus, service: prometheus, display_name: Prometheus, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: receipt-paybot
+            stack: receipt-paybot
+            display_name: receipt-paybot
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: bot, service: bot, display_name: Bot, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: db, service: db, display_name: Database, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: erpnext
+            stack: erpnext
+            display_name: ERPNext
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: backend, service: backend, display_name: Backend, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: db, service: db, display_name: Database, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: frontend, service: frontend, display_name: Frontend, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: queue-long, service: queue-long, display_name: Long queue, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: queue-short, service: queue-short, display_name: Short queue, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: redis-cache, service: redis-cache, display_name: Redis cache, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: redis-queue, service: redis-queue, display_name: Redis queue, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: scheduler, service: scheduler, display_name: Scheduler, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: websocket, service: websocket, display_name: WebSocket, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: how-team-ocr-poc
+            stack: how-team-ocr-poc
+            display_name: HOW Team OCR proof of concept
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: ocr-poc, service: ocr-poc, display_name: OCR proof of concept, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: ovh-reboot-bot
+            stack: ovh-reboot-bot
+            display_name: OVH reboot bot
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: ovh-reboot-bot, service: ovh-reboot-bot, display_name: OVH reboot bot, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+
+  - id: my-own
+    label: my own
+    display_name: Rabbit Systems internal
+    owners: *provider_owners
+    customer_visible: false
+    repository: *monitoring_repository
+    runbook: null
+    monitoring: *company_monitoring
+    servers:
+      # Host telemetry verified via private relay; application discovery remains pending.
+      - id: con2
+        alias: con2
+        ipv4: 169.58.53.13
+        provider_binding:
+          account_ref: contabo-primary
+          instance_id: "203455907"
+        display_name: Rabbit Systems con2 infrastructure server
+        role: infrastructure
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: {enabled: true, signals: [node]}
+        applications: []
+      - id: voice
+        alias: voice
+        ipv4: 109.205.177.191
+        provider_binding:
+          account_ref: contabo-primary
+          instance_id: "203404301"
+        display_name: Rabbit Systems voice infrastructure server
+        role: infrastructure
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: {enabled: true, signals: [node]}
+        applications: []
+      - id: test
+        alias: test
+        ipv4: 192.168.31.222
+        display_name: Rabbit Systems lab server
+        role: lab
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *server_monitoring
+        applications:
+          - id: erpnext3pl
+            stack: erpnext3pl
+            display_name: erpnext3pl
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: estimator-bot20
+            stack: estimator-bot20
+            display_name: estimator-bot20
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: kzpo-report-bot
+            stack: kzpo-report-bot
+            display_name: kzpo-report-bot
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: receipt-paybot
+            stack: receipt-paybot
+            display_name: receipt-paybot
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: report-service
+            stack: report-service
+            display_name: report-service
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: webtrees
+            stack: webtrees
+            display_name: webtrees
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+          - id: woocommerce
+            stack: woocommerce
+            display_name: woocommerce
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *pending_discovery_monitoring
+            components: []
+      - id: deployment
+        alias: deployment
+        ipv4: 169.58.132.8
+        display_name: Rabbit Systems deployment and control server
+        role: monitoring_and_platform
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: docs/deployments/deployment-production-2026-09-08.md
+        monitoring: *server_monitoring
+        applications:
+          - id: monitoring
+            stack: monitoring
+            display_name: Managed monitoring central services
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: *monitoring_repository
+            runbook: docs/deployments/deployment-production-2026-09-08.md
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: prometheus, service: prometheus, display_name: Prometheus, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: grafana, service: grafana, display_name: Grafana, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: loki, service: loki, display_name: Loki, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: alertmanager, service: alertmanager, display_name: Alertmanager, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: incident-gateway, service: incident-gateway, display_name: Incident gateway, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: blackbox, service: blackbox, display_name: Blackbox exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: prom-label-proxy-greenleaf, service: prom-label-proxy-greenleaf, display_name: Greenleaf scoped query proxy, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: node-exporter-deployment, service: node-exporter-deployment, display_name: Node exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: cadvisor-deployment, service: cadvisor-deployment, display_name: cAdvisor, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: rabbit-platform
+            stack: rabbit-platform
+            display_name: Rabbit Platform pilot
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: platform, service: platform, display_name: API and UI, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: worker, service: worker, display_name: Worker, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: database, service: database, display_name: PostgreSQL, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+      - id: con
+        alias: con
+        ipv4: 95.111.255.6
+        display_name: Rabbit Systems applications and collector relay
+        role: applications_and_monitoring_relay
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *server_monitoring
+        applications:
+          - id: monitoring
+            stack: monitoring
+            display_name: Retained con monitoring collectors
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: *monitoring_repository
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: cadvisor-con, service: cadvisor-con, display_name: cAdvisor, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: node-exporter-con, service: node-exporter-con, display_name: Node exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: snmp-exporter, service: snmp-exporter, display_name: SNMP exporter, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: monitoring-promtail
+            stack: monitoring-promtail
+            display_name: Standalone Promtail
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: *monitoring_repository
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: monitoring-promtail, service: monitoring-promtail, display_name: Promtail, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: openclaw-stack
+            stack: openclaw-stack
+            display_name: OpenClaw
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: api, service: api, display_name: API, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: postgres, service: postgres, display_name: PostgreSQL, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: qdrant, service: qdrant, display_name: Qdrant, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: redis, service: redis, display_name: Redis, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: ui, service: ui, display_name: UI, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: my-erp
+            stack: my-erp
+            display_name: Rabbit Systems ERP
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: backend, service: backend, display_name: Backend, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: configurator, service: configurator, display_name: Configurator one-shot, expected: false, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: db, service: db, display_name: Database, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: frontend, service: frontend, display_name: Frontend, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: queue-long, service: queue-long, display_name: Long queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: queue-short, service: queue-short, display_name: Short queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: redis-cache, service: redis-cache, display_name: Redis cache, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: redis-queue, service: redis-queue, display_name: Redis queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: scheduler, service: scheduler, display_name: Scheduler, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+              - {id: websocket, service: websocket, display_name: WebSocket, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: rabbitsystems-mail
+            stack: rabbitsystems-mail
+            display_name: Rabbit Systems mail
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: mailserver, service: mailserver, display_name: Mail server, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: monobank-balance-bot
+            stack: monobank-balance-bot
+            display_name: Monobank balance bot
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: bot, service: bot, display_name: Bot, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: rabbitsystems-site
+            stack: rabbitsystems-site
+            display_name: Rabbit Systems website
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: web, service: web, display_name: Web, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+          - id: quirky
+            stack: quirky
+            display_name: Quirky
+            status: pending_discovery
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: null
+            monitoring: *runtime_application_monitoring
+            components:
+              - {id: chaplygin, service: chaplygin, display_name: Chaplygin, expected: false, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
+
+  # Owner-confirmed customer production hosts, not yet onboarded to telemetry.
+  # No customer Grafana access, scrape endpoint or workload is implied here.
+  - id: seedquest
+    label: seedquest
+    display_name: SeedQuest
+    owners: *provider_owners
+    customer_visible: false
+    repository: *monitoring_repository
+    runbook: null
+    monitoring: *pending_discovery_monitoring
+    servers:
+      - id: seedquest
+        alias: seedquest
+        ipv4: 157.180.84.214
+        display_name: SeedQuest production server
+        role: production
+        status: pending_discovery
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
+  - id: mb-skolas
+    label: mb-skolas
+    display_name: MB Skolas
+    owners: *provider_owners
+    customer_visible: false
+    repository: *monitoring_repository
+    runbook: null
+    monitoring: *pending_discovery_monitoring
+    servers:
+      - id: wherp
+        alias: wherp
+        ipv4: 77.237.244.169
+        display_name: MB Skolas ERP production server
+        role: production
+        status: pending_discovery
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: null
+        monitoring: *pending_discovery_monitoring
+        applications: []
+
+service_event_defaults:
+  domain:
+    admin_lead_days: [60, 30, 14, 7, 1, 0]
+    customer_lead_days: [30, 14, 7, 1]
+  ssl:
+    admin_lead_days: [30, 14, 7, 3, 1, 0]
+    customer_lead_days: [14, 7, 3, 1]
+  subscription:
+    admin_lead_days: [30, 14, 7, 1, 0]
+    customer_lead_days: [14, 7, 1]
+  manual_renewal:
+    admin_lead_days: [30, 14, 7, 1, 0]
+    customer_lead_days: [14, 7, 1]
+
+# No trustworthy renewal dates are stored in this repository yet. Add an event
+# only after its due_at value has been verified with the responsible owner.
+service_events: []
 
 nodes:
   - alias: cloud
@@ -29,13 +893,32 @@ nodes:
     network: nat_reverse_tunnel
   - alias: con
     company: my own
-    role: monitoring_and_openclaw
+    role: applications_and_monitoring_relay
+  - alias: deployment
+    company: my own
+    role: monitoring_and_platform
   - alias: payroll
     company: rentall
     role: production
   - alias: howbot
     company: rentall
     role: production
+  - alias: con2
+    company: my own
+    role: infrastructure
+    status: active
+  - alias: voice
+    company: my own
+    role: infrastructure
+    status: active
+  - alias: seedquest
+    company: seedquest
+    role: production
+    status: pending_discovery
+  - alias: wherp
+    company: mb-skolas
+    role: production
+    status: pending_discovery
 
 http_services:
   - company: greenleaf
@@ -129,15 +1012,6 @@ pending_discovery:
       - company-monitor
       - pterodactyl
       - wordpress
-  - company: rentall
-    alias: howbot
-    stacks:
-      - howprod
-      - receipt-paybot
-  - company: rentall
-    alias: payroll
-    stacks:
-      - payrollbot21
   - company: my own
     alias: test
     stacks:
