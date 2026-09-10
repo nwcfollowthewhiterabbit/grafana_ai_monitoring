@@ -1,0 +1,19 @@
+[Unit]
+Description=Private node metrics relay for Rabbit %i
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+EnvironmentFile=/etc/rabbit-host-metrics/relay.env
+ExecStart=/usr/bin/ssh -NT -F /dev/null -i /etc/rabbit-host-metrics/id_ed25519 -o UserKnownHostsFile=/etc/rabbit-host-metrics/known_hosts -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -o ServerAliveCountMax=3 -R ${LISTEN}:127.0.0.1:19100 monitoring-%i@169.58.132.8
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadOnlyPaths=/etc/rabbit-host-metrics
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

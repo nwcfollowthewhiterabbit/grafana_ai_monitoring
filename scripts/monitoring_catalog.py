@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import ipaddress
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 from urllib.parse import urlsplit
@@ -372,8 +373,15 @@ def validate_catalog(catalog: Any) -> list[str]:
 		):
 			server_path = f"{path}.servers[{server_index}]"
 			server = _expect_mapping(raw_server, server_path, errors)
-			_reject_unknown(server, SERVER_KEYS | {"provider_binding"}, server_path, errors)
+			_reject_unknown(server, SERVER_KEYS | {"provider_binding", "ipv4"}, server_path, errors)
 			_require(server, SERVER_KEYS, server_path, errors)
+			if "ipv4" in server:
+				try:
+					if not isinstance(server["ipv4"], str): raise ValueError("string required")
+					ip = ipaddress.IPv4Address(server["ipv4"])
+					if ip.is_unspecified or ip.is_loopback or ip.is_multicast: raise ValueError("invalid display IP")
+				except ValueError:
+					errors.append(f"{server_path}.ipv4: invalid IPv4")
 			if "provider_binding" in server:
 				binding = _expect_mapping(server["provider_binding"], f"{server_path}.provider_binding", errors)
 				instance = binding.get("instance_id")

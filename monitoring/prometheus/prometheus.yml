@@ -41,6 +41,14 @@ scrape_configs:
 
   - job_name: node_exporter_clients
     static_configs:
+      - targets: [node-exporter-con2:9100]
+        labels:
+          alias: con2
+          company: my own
+      - targets: [node-exporter-voice:9100]
+        labels:
+          alias: voice
+          company: my own
       - targets:
           - node-exporter-con:9100
         labels:

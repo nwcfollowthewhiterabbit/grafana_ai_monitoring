@@ -35,6 +35,7 @@ companies:
     servers:
       - id: cloud
         alias: cloud
+        ipv4: 139.99.155.118
         display_name: Greenleaf production server
         role: production
         status: active
@@ -333,6 +334,7 @@ companies:
             components: []
       - id: testing
         alias: testing
+        ipv4: 139.99.155.122
         display_name: Greenleaf test server
         # Existing technical role retained. Owner intends a future migration
         # of outdated websites here; no application placement changes yet.
@@ -376,6 +378,7 @@ companies:
             components: []
       - id: new
         alias: new
+        ipv4: 139.99.171.55
         display_name: Greenleaf pending server
         role: production
         status: pending_access
@@ -399,6 +402,7 @@ companies:
     servers:
       - id: payroll
         alias: payroll
+        ipv4: 64.227.115.196
         display_name: HOW Production payroll server
         role: production
         status: active
@@ -423,6 +427,7 @@ companies:
               - {id: payroll-bot, service: payroll-bot, display_name: Payroll bot, expected: true, owners: *provider_owners, customer_visible: true, repository: null, runbook: null, monitoring: &runtime_component_monitoring {enabled: true, signals: [containers, logs]}}
       - id: howbot
         alias: howbot
+        ipv4: 141.94.121.160
         display_name: HOW Production bot server
         role: production
         status: active
@@ -539,6 +544,7 @@ companies:
       # Registration must not create targets or imply that a host is healthy.
       - id: con2
         alias: con2
+        ipv4: 169.58.53.13
         provider_binding:
           account_ref: contabo-primary
           instance_id: "203455907"
@@ -549,10 +555,11 @@ companies:
         customer_visible: false
         repository: *monitoring_repository
         runbook: null
-        monitoring: *pending_discovery_monitoring
+        monitoring: {enabled: true, signals: [node]}
         applications: []
       - id: voice
         alias: voice
+        ipv4: 109.205.177.191
         provider_binding:
           account_ref: contabo-primary
           instance_id: "203404301"
@@ -563,10 +570,11 @@ companies:
         customer_visible: false
         repository: *monitoring_repository
         runbook: null
-        monitoring: *pending_discovery_monitoring
+        monitoring: {enabled: true, signals: [node]}
         applications: []
       - id: test
         alias: test
+        ipv4: 192.168.31.222
         display_name: Rabbit Systems lab server
         role: lab
         status: active
@@ -648,6 +656,7 @@ companies:
             components: []
       - id: deployment
         alias: deployment
+        ipv4: 169.58.132.8
         display_name: Rabbit Systems deployment and control server
         role: monitoring_and_platform
         status: active
@@ -691,6 +700,7 @@ companies:
               - {id: database, service: database, display_name: PostgreSQL, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *runtime_component_monitoring}
       - id: con
         alias: con
+        ipv4: 95.111.255.6
         display_name: Rabbit Systems applications and collector relay
         role: applications_and_monitoring_relay
         status: active
@@ -817,6 +827,7 @@ companies:
     servers:
       - id: seedquest
         alias: seedquest
+        ipv4: 157.180.84.214
         display_name: SeedQuest production server
         role: production
         status: pending_discovery
@@ -837,6 +848,7 @@ companies:
     servers:
       - id: wherp
         alias: wherp
+        ipv4: 77.237.244.169
         display_name: MB Skolas ERP production server
         role: production
         status: pending_discovery
