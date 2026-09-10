@@ -344,6 +344,7 @@ def validate_catalog(catalog: Any) -> list[str]:
 	companies_by_id: dict[str, Mapping[str, Any]] = {}
 	companies_by_label: dict[str, Mapping[str, Any]] = {}
 	servers_by_key: dict[tuple[str, str], Mapping[str, Any]] = {}
+	provider_bindings: set[str] = set()
 	applications_by_key: dict[tuple[str, str, str], Mapping[str, Any]] = {}
 	components_by_key: dict[tuple[str, str, str, str], Mapping[str, Any]] = {}
 
@@ -371,8 +372,21 @@ def validate_catalog(catalog: Any) -> list[str]:
 		):
 			server_path = f"{path}.servers[{server_index}]"
 			server = _expect_mapping(raw_server, server_path, errors)
-			_reject_unknown(server, SERVER_KEYS, server_path, errors)
+			_reject_unknown(server, SERVER_KEYS | {"provider_binding"}, server_path, errors)
 			_require(server, SERVER_KEYS, server_path, errors)
+			if "provider_binding" in server:
+				binding = _expect_mapping(server["provider_binding"], f"{server_path}.provider_binding", errors)
+				instance = binding.get("instance_id")
+				if (set(binding) != {"account_ref", "instance_id"}
+					or binding.get("account_ref") != "contabo-primary"
+					or not isinstance(instance, str)
+					or not re.fullmatch(r"[1-9][0-9]{0,18}", instance)
+					or int(instance) > (1 << 63) - 1):
+					errors.append(f"{server_path}.provider_binding: invalid reviewed Contabo binding")
+				elif instance in provider_bindings:
+					errors.append(f"{server_path}.provider_binding: duplicate Contabo instance")
+				else:
+					provider_bindings.add(instance)
 			server_id = _validate_id(server.get("id"), f"{server_path}.id", errors)
 			alias = _validate_nonempty_string(server.get("alias"), f"{server_path}.alias", errors)
 			if server_id in server_ids:
