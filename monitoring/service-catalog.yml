@@ -540,8 +540,7 @@ companies:
     runbook: null
     monitoring: *company_monitoring
     servers:
-      # Ownership confirmed by the owner; telemetry/workloads not inspected.
-      # Registration must not create targets or imply that a host is healthy.
+      # Host telemetry verified via private relay; application discovery remains pending.
       - id: con2
         alias: con2
         ipv4: 169.58.53.13
@@ -550,7 +549,7 @@ companies:
           instance_id: "203455907"
         display_name: Rabbit Systems con2 infrastructure server
         role: infrastructure
-        status: pending_discovery
+        status: active
         owners: *provider_owners
         customer_visible: false
         repository: *monitoring_repository
@@ -565,7 +564,7 @@ companies:
           instance_id: "203404301"
         display_name: Rabbit Systems voice infrastructure server
         role: infrastructure
-        status: pending_discovery
+        status: active
         owners: *provider_owners
         customer_visible: false
         repository: *monitoring_repository
@@ -907,11 +906,11 @@ nodes:
   - alias: con2
     company: my own
     role: infrastructure
-    status: pending_discovery
+    status: active
   - alias: voice
     company: my own
     role: infrastructure
-    status: pending_discovery
+    status: active
   - alias: seedquest
     company: seedquest
     role: production
