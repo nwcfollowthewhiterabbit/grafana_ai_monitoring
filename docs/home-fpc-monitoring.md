@@ -38,11 +38,16 @@ is `monitoring-fpc@169.58.132.8`, exact private listener `172.23.0.1:19132`, sou
 `127.0.0.1:9182`. This uses the existing monitoring bridge and reverse-SSH pattern;
 no public exporter or new infrastructure service is needed.
 
-At this checkpoint the relay is **prepared, not started** and destination
-enrollment is **not applied**. The Windows task does not yet exist. After the
-destination account is reviewed and installed, `-Mode Start` registers
-`Rabbit-Home-Metrics-Relay` under SYSTEM at startup with reconnects. It works
-without the Mac. The key permits only this remote listener; destination policy
+The bounded destination enrollment was explicitly approved and applied on
+2026-09-27. `Rabbit-Home-Metrics-Relay` now runs under SYSTEM at startup with
+reconnects, independently of the Mac. The dedicated key has owner Administrators
+and an explicit SYSTEM/Administrators-only DACL; its bytes were preserved.
+At **2026-09-27T12:27:21Z**, the destination listener was only
+`172.23.0.1:19132` and Prometheus reported the exact FPC target **up=1**,
+16 logical CPUs, 33,158,033,408 usable physical RAM bytes, and M: capacity
+1,675,677,925,376 bytes/free 986,910,294,016 bytes. The private apply receipt is
+`/opt/release-staging/home-fpc-monitoring-20260927/receipt`, plan SHA256
+`d58aad2fe4e992cd10a2b8697f489f679548605ff198a4dd258b2f05bdf8ed6e`. The key permits only this remote listener; destination policy
 denies sessions, local forwarding, password/interactive login, PTY and agent/X11.
 
 `scripts/enroll-home-fpc-monitoring.py prepare` creates private preimages and
@@ -64,10 +69,10 @@ sudo python3 scripts/enroll-home-fpc-monitoring.py prepare \
   --prometheus-container REVIEWED_EXISTING_CONTAINER
 ```
 
-Do not infer completion from the prepared catalog or service state. Acceptance
-requires the private destination socket, exact `up{job="windows_exporter_clients",
-company="my own",alias="fpc"}=1`, the bounded Platform read through its existing
-private metrics proxy, and authenticated server-card rendering. Existing
+Transport acceptance passed for the private destination socket and exact
+`up{job="windows_exporter_clients",company="my own",alias="fpc"}=1`.
+Platform source/catalog deployment, its bounded metrics-proxy read and
+authenticated server-card rendering remain separate rollout checks. Existing
 WindowsExporterDown alert routing is reused; no new notification destination,
 GPU collector or CPU/memory resource alert is introduced by this slice.
 

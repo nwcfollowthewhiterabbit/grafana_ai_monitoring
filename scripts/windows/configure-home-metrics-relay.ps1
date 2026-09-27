@@ -26,6 +26,17 @@ if (-not (Test-Path $key)) {
     $process = Start-Process -FilePath $keygen -ArgumentList ('-q -t ed25519 -N "" -C rabbit-fpc-monitoring -f "' + $key + '"') -Wait -PassThru -NoNewWindow
     if ($process.ExitCode -ne 0) { throw 'Relay key generation failed' }
 }
+if ((Get-Item $key).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Relay key is a reparse point' }
+# ssh-keygen installs a caller-owned DACL. The startup task runs as SYSTEM,
+# which must not accept a private key owned/readable by that unrelated caller.
+$keyAcl = New-Object Security.AccessControl.FileSecurity
+$keyAcl.SetAccessRuleProtection($true, $false)
+$keyAcl.SetOwner((New-Object Security.Principal.SecurityIdentifier('S-1-5-32-544')))
+foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
+    $rule = New-Object Security.AccessControl.FileSystemAccessRule((New-Object Security.Principal.SecurityIdentifier($sid)), 'FullControl', 'Allow')
+    $keyAcl.AddAccessRule($rule)
+}
+Set-Acl -LiteralPath $key -AclObject $keyAcl
 $hostLine = $RelayHost + ' ' + $PinnedHostPublicKey
 if (Test-Path $known) {
     if ((Get-Content -Raw $known).Trim() -ne $hostLine) { throw 'Existing pinned host key differs' }
