@@ -571,6 +571,19 @@ companies:
         runbook: null
         monitoring: {enabled: true, signals: [node]}
         applications: []
+      - id: fpc
+        alias: fpc
+        ipv4: 192.168.31.212
+        display_name: Rabbit Systems home compute server
+        role: development
+        status: active
+        owners: *provider_owners
+        customer_visible: false
+        repository: *monitoring_repository
+        runbook: docs/home-fpc-monitoring.md
+        monitoring: {enabled: true, signals: [node]}
+        metrics_profile: {kind: windows_exporter, filesystem: 'M:'}
+        applications: []
       - id: test
         alias: test
         ipv4: 192.168.31.222
@@ -877,6 +890,11 @@ service_event_defaults:
 service_events: []
 
 nodes:
+  - alias: fpc
+    company: my own
+    role: development
+    status: active
+    network: nat_reverse_tunnel
   - alias: cloud
     company: greenleaf
     role: production

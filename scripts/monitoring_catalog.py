@@ -373,8 +373,15 @@ def validate_catalog(catalog: Any) -> list[str]:
 		):
 			server_path = f"{path}.servers[{server_index}]"
 			server = _expect_mapping(raw_server, server_path, errors)
-			_reject_unknown(server, SERVER_KEYS | {"provider_binding", "ipv4"}, server_path, errors)
+			_reject_unknown(server, SERVER_KEYS | {"provider_binding", "ipv4", "metrics_profile"}, server_path, errors)
 			_require(server, SERVER_KEYS, server_path, errors)
+			if "metrics_profile" in server:
+				profile = _expect_mapping(server["metrics_profile"], f"{server_path}.metrics_profile", errors)
+				filesystem = profile.get("filesystem")
+				if (set(profile) != {"kind", "filesystem"} or not (
+					(profile.get("kind") == "linux_node_exporter" and filesystem == "/") or
+					(profile.get("kind") == "windows_exporter" and isinstance(filesystem, str) and re.fullmatch(r"[A-Z]:", filesystem)))):
+					errors.append(f"{server_path}.metrics_profile: invalid fixed host metrics profile")
 			if "ipv4" in server:
 				try:
 					if not isinstance(server["ipv4"], str): raise ValueError("string required")

@@ -14,6 +14,7 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 RELAY = "172.23.0.1"
 TRANSPORT = {
+    "windows-exporter-fpc:9182": 19132,
     "node-exporter-con2:9100": 19130,
     "node-exporter-voice:9100": 19131,
     "node-exporter-con:9100": 19110,

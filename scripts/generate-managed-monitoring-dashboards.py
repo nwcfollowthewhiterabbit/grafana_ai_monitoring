@@ -418,6 +418,30 @@ def greenleaf_copy(source: dict, *, uid: str, title: str) -> dict:
     return replace_strings(result)
 
 
+def build_windows_host() -> dict:
+    scope = 'job="windows_exporter_clients",company=~"$company",alias=~"$server"'
+    reachable = f'(max by(company,alias)(up{{{scope}}}) == 1)'
+    cpu = f'(100 * (1 - avg by(company,alias)(rate(windows_cpu_time_total{{{scope},mode="idle"}}[5m])))) and on(company,alias) {reachable}'
+    memory = f'(100 * (1 - windows_memory_available_bytes{{{scope}}} / windows_memory_physical_total_bytes{{{scope}}})) and on(company,alias) {reachable}'
+    disk = f'(100 * (1 - windows_logical_disk_free_bytes{{{scope}}} / windows_logical_disk_size_bytes{{{scope}}})) and on(company,alias) {reachable}'
+    variables = [
+        query_var("company", "Company", 'label_values(up{job="windows_exporter_clients"}, company)'),
+        query_var("server", "Server", 'label_values(up{job="windows_exporter_clients",company=~"$company"}, alias)'),
+    ]
+    panels = [
+        text_panel(1, "Windows host", "Physical Windows CPU, RAM and selected volumes. Runner readiness is shown separately in Rabbit Agents. A lost exporter means telemetry is unavailable; it does not establish that the computer is powered off. Windows disk counters can lag by 10–15 minutes.", 0, 0, 24, 3),
+        state_panel(stat_panel(2, "Host telemetry", f'min(up{{{scope}}})', 0, 3, 6, 4), positive="REACHABLE", negative="UNREACHABLE"),
+        stat_panel(3, "CPU used", cpu, 6, 3, 6, 4, unit="percent", minimum=0, maximum=100),
+        stat_panel(4, "RAM used", memory, 12, 3, 6, 4, unit="percent", minimum=0, maximum=100),
+        stat_panel(5, "Physical RAM", f'windows_memory_physical_total_bytes{{{scope}}} and on(company,alias) {reachable}', 18, 3, 6, 4, unit="bytes"),
+        timeseries_panel(6, "CPU usage", [("A", cpu, "{{alias}}")], 0, 7, 12, 8, unit="percent"),
+        timeseries_panel(7, "RAM usage", [("A", memory, "{{alias}}")], 12, 7, 12, 8, unit="percent"),
+        timeseries_panel(8, "Disk usage by volume", [("A", disk, "{{alias}} · {{volume}}")], 0, 15, 12, 8, unit="percent", description="Windows performance disk capacity/free counters may lag by 10–15 minutes."),
+        timeseries_panel(9, "Free disk space by volume", [("A", f'windows_logical_disk_free_bytes{{{scope}}} and on(company,alias) {reachable}', "{{alias}} · {{volume}}")], 12, 15, 12, 8, unit="bytes"),
+    ]
+    return dashboard("Rabbit · Windows Host", "managed-windows-host", "Scoped physical Windows host telemetry; separate from VM and Runner observations.", variables, panels, [])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check", action="store_true", help="fail if generated dashboards differ")
@@ -435,6 +459,13 @@ def main() -> None:
         "managed-application-drilldown.json": ("greenleaf-managed-application", "Rabbit Systems Managed Monitoring · Greenleaf Application"),
     }
     drift = []
+    windows_path = ADMIN_DIR / "managed-windows-host.json"
+    windows_content = json.dumps(build_windows_host(), indent=2, ensure_ascii=False) + "\n"
+    if args.check:
+        if not windows_path.exists() or windows_path.read_text(encoding="utf-8") != windows_content:
+            drift.append(str(windows_path))
+    else:
+        windows_path.write_text(windows_content, encoding="utf-8")
     for filename, data in dashboards.items():
         admin_path = ADMIN_DIR / filename
         admin_content = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
