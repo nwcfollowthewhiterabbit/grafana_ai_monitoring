@@ -32,7 +32,8 @@ class HomeFPCMonitoring(unittest.TestCase):
         self.assertIn("PermitListen 172.23.0.1:19132", files[str(module.SSH_FRAGMENT)].decode())
         self.assertIn("MaxSessions 0", files[str(module.SSH_FRAGMENT)].decode())
         self.assertTrue(files[str(module.SSH_FRAGMENT)].endswith(b"Match all\n"))
-        self.assertIn('permitopen="none"', module.AUTHORIZED_KEY)
+        self.assertIn("PermitOpen none", files[str(module.SSH_FRAGMENT)].decode())
+        self.assertNotIn('permitopen="none"', module.AUTHORIZED_KEY)
         with self.assertRaises(RuntimeError):
             module.candidates(files[str(module.PROMETHEUS)], files[str(module.TARGETS)], dashboard)
         broken = copy.deepcopy(prom)

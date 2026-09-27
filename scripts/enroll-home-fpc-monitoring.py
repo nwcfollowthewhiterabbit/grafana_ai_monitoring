@@ -40,7 +40,7 @@ Match User monitoring-fpc
     ForceCommand /usr/sbin/nologin
 Match all
 """
-AUTHORIZED_KEY = 'restrict,port-forwarding,permitlisten="172.23.0.1:19132",permitopen="none",command="/usr/sbin/nologin" ' + KEY + "\n"
+AUTHORIZED_KEY = 'restrict,port-forwarding,permitlisten="172.23.0.1:19132",command="/usr/sbin/nologin" ' + KEY + "\n"
 
 
 def digest(data):
