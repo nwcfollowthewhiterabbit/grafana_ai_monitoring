@@ -12,19 +12,6 @@
     component_id: app
     customer_visible: 'true'
 - targets:
-  - https://cgi.greenleafpacific.com
-  labels:
-    company: greenleaf
-    alias: cloud
-    stack: cgigreenleafpacificcom
-    service: app
-    criticality: high
-    company_id: greenleaf
-    server_id: cloud
-    application_id: cgigreenleafpacificcom
-    component_id: app
-    customer_visible: 'true'
-- targets:
   - https://erp.greenleafpacific.com
   labels:
     company: greenleaf
@@ -36,19 +23,6 @@
     server_id: cloud
     application_id: erpgreenleafpacificcom
     component_id: frontend
-    customer_visible: 'true'
-- targets:
-  - https://fiji.pacific.cleaning
-  labels:
-    company: greenleaf
-    alias: cloud
-    stack: fijipacificcleaning
-    service: app
-    criticality: high
-    company_id: greenleaf
-    server_id: cloud
-    application_id: fijipacificcleaning
-    component_id: app
     customer_visible: 'true'
 - targets:
   - https://furniture.com.fj
@@ -64,19 +38,6 @@
     component_id: app
     customer_visible: 'true'
 - targets:
-  - https://greenleafpacific.com
-  labels:
-    company: greenleaf
-    alias: cloud
-    stack: greenleafpacificcom
-    service: app
-    criticality: high
-    company_id: greenleaf
-    server_id: cloud
-    application_id: greenleafpacificcom
-    component_id: app
-    customer_visible: 'true'
-- targets:
   - https://cloud.greenleafpacific.com
   labels:
     company: greenleaf
@@ -87,45 +48,6 @@
     company_id: greenleaf
     server_id: cloud
     application_id: nextcloud-docker
-    component_id: app
-    customer_visible: 'true'
-- targets:
-  - https://pacific.cleaning
-  labels:
-    company: greenleaf
-    alias: cloud
-    stack: pacificcleaning
-    service: app
-    criticality: high
-    company_id: greenleaf
-    server_id: cloud
-    application_id: pacificcleaning
-    component_id: app
-    customer_visible: 'true'
-- targets:
-  - https://sg.greenleafpacific.com
-  labels:
-    company: greenleaf
-    alias: cloud
-    stack: sggreenleafpacificcom
-    service: app
-    criticality: high
-    company_id: greenleaf
-    server_id: cloud
-    application_id: sggreenleafpacificcom
-    component_id: app
-    customer_visible: 'true'
-- targets:
-  - https://spa.com.fj
-  labels:
-    company: greenleaf
-    alias: cloud
-    stack: spacomfj
-    service: app
-    criticality: high
-    company_id: greenleaf
-    server_id: cloud
-    application_id: spacomfj
     component_id: app
     customer_visible: 'true'
 - targets:
@@ -165,5 +87,109 @@
     company_id: greenleaf
     server_id: cloud
     application_id: testinggreenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://cgi.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: cgigreenleafpacificcom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: cgigreenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://tt.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: company-monitor
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: company-monitor
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://fiji.pacific.cleaning
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: fijipacificcleaning
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: fijipacificcleaning
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: greenleafpacificcom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: greenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://pacific.cleaning
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: pacificcleaning
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: pacificcleaning
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://sg.greenleafpacific.com
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: sggreenleafpacificcom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: sggreenleafpacificcom
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://spa.com.fj
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: spacomfj
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: spacomfj
+    component_id: app
+    customer_visible: 'true'
+- targets:
+  - https://trexfiji.com
+  labels:
+    company: greenleaf
+    alias: testing
+    stack: trexfijicom
+    service: app
+    criticality: high
+    company_id: greenleaf
+    server_id: testing
+    application_id: trexfijicom
     component_id: app
     customer_visible: 'true'

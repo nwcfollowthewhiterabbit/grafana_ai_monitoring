@@ -82,25 +82,6 @@ companies:
                   retry_interval_seconds: 300
                   failure_threshold: 3
                   consecutive_bad_cycles: 2
-          - id: greenleafpacificcom
-            stack: greenleafpacificcom
-            display_name: greenleafpacific.com
-            status: active
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: *greenleaf_public_runbook
-            monitoring: *public_application_monitoring
-            components:
-              - id: app
-                service: app
-                display_name: Public application
-                expected: true
-                owners: *provider_owners
-                customer_visible: true
-                repository: null
-                runbook: *greenleaf_public_runbook
-                monitoring: *public_component_monitoring
           - id: erpgreenleafpacificcom
             stack: erpgreenleafpacificcom
             display_name: Greenleaf ERP
@@ -120,104 +101,9 @@ companies:
                 repository: null
                 runbook: *greenleaf_public_runbook
                 monitoring: *public_component_monitoring
-          - id: cgigreenleafpacificcom
-            stack: cgigreenleafpacificcom
-            display_name: cgi.greenleafpacific.com
-            status: active
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: *greenleaf_public_runbook
-            monitoring: *public_application_monitoring
-            components:
-              - id: app
-                service: app
-                display_name: Public application
-                expected: true
-                owners: *provider_owners
-                customer_visible: true
-                repository: null
-                runbook: *greenleaf_public_runbook
-                monitoring: *public_component_monitoring
-          - id: sggreenleafpacificcom
-            stack: sggreenleafpacificcom
-            display_name: sg.greenleafpacific.com
-            status: active
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: *greenleaf_public_runbook
-            monitoring: *public_application_monitoring
-            components:
-              - id: app
-                service: app
-                display_name: Public application
-                expected: true
-                owners: *provider_owners
-                customer_visible: true
-                repository: null
-                runbook: *greenleaf_public_runbook
-                monitoring: *public_component_monitoring
-          - id: spacomfj
-            stack: spacomfj
-            display_name: spa.com.fj
-            status: active
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: *greenleaf_public_runbook
-            monitoring: *public_application_monitoring
-            components:
-              - id: app
-                service: app
-                display_name: Public application
-                expected: true
-                owners: *provider_owners
-                customer_visible: true
-                repository: null
-                runbook: *greenleaf_public_runbook
-                monitoring: *public_component_monitoring
           - id: furniturecomfj
             stack: furniturecomfj
             display_name: furniture.com.fj
-            status: active
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: *greenleaf_public_runbook
-            monitoring: *public_application_monitoring
-            components:
-              - id: app
-                service: app
-                display_name: Public application
-                expected: true
-                owners: *provider_owners
-                customer_visible: true
-                repository: null
-                runbook: *greenleaf_public_runbook
-                monitoring: *public_component_monitoring
-          - id: pacificcleaning
-            stack: pacificcleaning
-            display_name: pacific.cleaning
-            status: active
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: *greenleaf_public_runbook
-            monitoring: *public_application_monitoring
-            components:
-              - id: app
-                service: app
-                display_name: Public application
-                expected: true
-                owners: *provider_owners
-                customer_visible: true
-                repository: null
-                runbook: *greenleaf_public_runbook
-                monitoring: *public_component_monitoring
-          - id: fijipacificcleaning
-            stack: fijipacificcleaning
-            display_name: fiji.pacific.cleaning
             status: active
             owners: *provider_owners
             customer_visible: true
@@ -322,23 +208,11 @@ companies:
               enabled: false
               signals: []
             components: []
-          - id: trexfijicom
-            stack: trexfijicom
-            display_name: trexfijicom
-            status: pending_discovery
-            owners: *provider_owners
-            customer_visible: true
-            repository: null
-            runbook: null
-            monitoring: *pending_discovery_monitoring
-            components: []
       - id: testing
         alias: testing
         ipv4: 139.99.155.122
-        display_name: Greenleaf test server
-        # Existing technical role retained. Owner intends a future migration
-        # of outdated websites here; no application placement changes yet.
-        role: staging
+        display_name: Greenleaf legacy sites and testing server
+        role: production
         status: active
         owners: *provider_owners
         customer_visible: true
@@ -346,16 +220,158 @@ companies:
         runbook: null
         monitoring: *server_monitoring
         applications:
-          - id: company-monitor
-            stack: company-monitor
-            display_name: company-monitor
-            status: pending_discovery
+          - id: greenleafpacificcom
+            stack: greenleafpacificcom
+            display_name: greenleafpacific.com
+            status: active
             owners: *provider_owners
             customer_visible: true
             repository: null
-            runbook: null
-            monitoring: *pending_discovery_monitoring
-            components: []
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: cgigreenleafpacificcom
+            stack: cgigreenleafpacificcom
+            display_name: cgi.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: sggreenleafpacificcom
+            stack: sggreenleafpacificcom
+            display_name: sg.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: spacomfj
+            stack: spacomfj
+            display_name: spa.com.fj
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: pacificcleaning
+            stack: pacificcleaning
+            display_name: pacific.cleaning
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: fijipacificcleaning
+            stack: fijipacificcleaning
+            display_name: fiji.pacific.cleaning
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: trexfijicom
+            stack: trexfijicom
+            display_name: trexfiji.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
+          - id: company-monitor
+            stack: company-monitor
+            display_name: tt.greenleafpacific.com
+            status: active
+            owners: *provider_owners
+            customer_visible: true
+            repository: null
+            runbook: *greenleaf_public_runbook
+            monitoring: *public_application_monitoring
+            components:
+              - id: app
+                service: app
+                display_name: Public application
+                expected: true
+                owners: *provider_owners
+                customer_visible: true
+                repository: null
+                runbook: *greenleaf_public_runbook
+                monitoring: *public_component_monitoring
           - id: pterodactyl
             stack: pterodactyl
             display_name: pterodactyl
@@ -900,7 +916,7 @@ nodes:
     role: production
   - alias: testing
     company: greenleaf
-    role: staging
+    role: production
   - alias: new
     company: greenleaf
     role: production
@@ -946,7 +962,7 @@ http_services:
     url: https://cloud.greenleafpacific.com
     criticality: high
   - company: greenleaf
-    alias: cloud
+    alias: testing
     stack: greenleafpacificcom
     service: app
     url: https://greenleafpacific.com
@@ -958,19 +974,19 @@ http_services:
     url: https://erp.greenleafpacific.com
     criticality: critical
   - company: greenleaf
-    alias: cloud
+    alias: testing
     stack: cgigreenleafpacificcom
     service: app
     url: https://cgi.greenleafpacific.com
     criticality: high
   - company: greenleaf
-    alias: cloud
+    alias: testing
     stack: sggreenleafpacificcom
     service: app
     url: https://sg.greenleafpacific.com
     criticality: high
   - company: greenleaf
-    alias: cloud
+    alias: testing
     stack: spacomfj
     service: app
     url: https://spa.com.fj
@@ -982,13 +998,13 @@ http_services:
     url: https://furniture.com.fj
     criticality: high
   - company: greenleaf
-    alias: cloud
+    alias: testing
     stack: pacificcleaning
     service: app
     url: https://pacific.cleaning
     criticality: high
   - company: greenleaf
-    alias: cloud
+    alias: testing
     stack: fijipacificcleaning
     service: app
     url: https://fiji.pacific.cleaning
@@ -1017,17 +1033,27 @@ http_services:
     service: app
     url: https://bulataxi.com
     criticality: high
+  - company: greenleaf
+    alias: testing
+    stack: trexfijicom
+    service: app
+    url: https://trexfiji.com
+    criticality: high
+  - company: greenleaf
+    alias: testing
+    stack: company-monitor
+    service: app
+    url: https://tt.greenleafpacific.com
+    criticality: high
 
 pending_discovery:
   - company: greenleaf
     alias: cloud
     stacks:
       - beautylabspacomfj
-      - trexfijicom
   - company: greenleaf
     alias: testing
     stacks:
-      - company-monitor
       - pterodactyl
       - wordpress
   - company: my own

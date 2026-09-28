@@ -42,19 +42,23 @@ CONFIRMED_OWNERS = {
 	"howbot": "rentall",
 	"payroll": "rentall",
 }
+# con2 and voice have verified node telemetry; only these hosts still lack
+# confirmed runtime access and discovery.
 UNDISCOVERED_SERVERS = {"seedquest", "wherp"}
 
-# A future workload migration must deliberately update this expectation; declaring
-# a destination for legacy sites is not evidence that they have moved there.
+# The Greenleaf legacy-site migration was completed on 2026-09-19. Keep this
+# expectation aligned with the confirmed runtime placement.
 EXISTING_APPLICATIONS = {
 	("greenleaf", "cloud"): {
-		"nextcloud-docker", "greenleafpacificcom", "erpgreenleafpacificcom",
-		"cgigreenleafpacificcom", "sggreenleafpacificcom", "spacomfj",
-		"furniturecomfj", "pacificcleaning", "fijipacificcleaning",
+		"nextcloud-docker", "erpgreenleafpacificcom", "furniturecomfj",
 		"testingerpgreenleafpacificcom", "testinggreenleafpacificcom",
-		"testing2greenleafpacificcom", "bulataxicom", "beautylabspacomfj", "trexfijicom",
+		"testing2greenleafpacificcom", "bulataxicom", "beautylabspacomfj",
 	},
-	("greenleaf", "testing"): {"company-monitor", "pterodactyl", "wordpress"},
+	("greenleaf", "testing"): {
+		"greenleafpacificcom", "cgigreenleafpacificcom", "sggreenleafpacificcom",
+		"spacomfj", "pacificcleaning", "fijipacificcleaning", "trexfijicom",
+		"company-monitor", "pterodactyl", "wordpress",
+	},
 	("greenleaf", "new"): set(),
 	("rentall", "payroll"): {"payrollbot21"},
 	("rentall", "howbot"): {
@@ -92,8 +96,7 @@ class ServerOwnershipTests(unittest.TestCase):
 				self.assertEqual(matches, [(owner, alias)])
 		for alias in ("cloud", "seedquest", "wherp", "howbot", "payroll"):
 			self.assertEqual(self.servers[(CONFIRMED_OWNERS[alias], alias)]["role"], "production")
-		# Existing exporter metadata may retain the historical staging role.
-		self.assertIn(self.servers[("greenleaf", "testing")]["role"], {"test", "testing", "staging"})
+		self.assertEqual(self.servers[("greenleaf", "testing")]["role"], "production")
 
 	def test_how_renames_presentation_without_renaming_legacy_identity(self):
 		how = self.companies["rentall"]
@@ -132,9 +135,13 @@ class ServerOwnershipTests(unittest.TestCase):
 	def test_metadata_update_creates_no_scrape_targets_and_preserves_generated_http_targets(self):
 		expected = (ROOT / "monitoring/prometheus/file_sd/http_targets.yml").read_text(encoding="utf-8")
 		self.assertEqual(RENDERER.render_http_targets(self.catalog), expected)
-		self.assertEqual(len(self.catalog["http_services"]), 13)
-		for service in self.catalog["http_services"]:
-			self.assertEqual((service["company"], service["alias"]), ("greenleaf", "cloud"))
+		self.assertEqual(len(self.catalog["http_services"]), 15)
+		greenleaf_aliases = [
+			service["alias"] for service in self.catalog["http_services"]
+			if service["company"] == "greenleaf"
+		]
+		self.assertEqual(greenleaf_aliases.count("cloud"), 7)
+		self.assertEqual(greenleaf_aliases.count("testing"), 8)
 		prometheus = yaml.safe_load((ROOT / "monitoring/prometheus/prometheus.yml").read_text())
 		configured_aliases = {
 			config.get("labels", {}).get("alias")

@@ -41,7 +41,7 @@ class CatalogTests(unittest.TestCase):
 	def test_repository_catalog_is_strictly_valid_and_legacy_mapped(self):
 		catalog = load_catalog(CATALOG)
 		self.assertEqual(catalog["version"], 2)
-		self.assertEqual(len(catalog["http_services"]), 13)
+		self.assertEqual(len(catalog["http_services"]), 15)
 		self.assertEqual(validate_catalog(catalog), [])
 
 	def test_runtime_inventory_includes_integrated_monitoring_components(self):

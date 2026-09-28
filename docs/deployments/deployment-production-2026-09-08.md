@@ -49,6 +49,7 @@ addresses are operational bindings, not automatically discovered stable IDs.
 | 172.23.0.1:19116 | con SNMP exporter / Rentall VPN |
 | 172.23.0.1:19120 | howbot node-exporter, otherwise unreachable from deployment |
 | 172.23.0.1:19182 / 19183 | Rentall Windows exporters through con |
+| 172.23.0.1:19118 | Greenleaf cloud cAdvisor, bound to cloud loopback only |
 
 These listeners bind the Docker bridge gateway, never a public interface.
 `scripts/render-deployment-monitoring.py` rewrites transport addresses through

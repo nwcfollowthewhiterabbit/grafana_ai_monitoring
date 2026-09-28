@@ -29,6 +29,13 @@ class DeploymentTransportTests(unittest.TestCase):
         self.assertEqual(nodes["con"], ["node-exporter-con:9100"])
         self.assertEqual(nodes["deployment"], ["node-exporter-deployment:9100"])
 
+    def test_cloud_cadvisor_uses_private_reverse_tunnel(self):
+        result = MODULE.render(yaml.safe_load((ROOT / "monitoring/prometheus/prometheus.yml").read_text()))
+        by_name = {job["job_name"]: job for job in result["scrape_configs"]}
+        rules = by_name["cadvisor_clients"]["relabel_configs"]
+        cloud_rule = next(rule for rule in rules if rule.get("regex") == "139\\.99\\.155\\.118:18082")
+        self.assertEqual(cloud_rule["replacement"], "172.23.0.1:19118")
+
     def test_private_plane_exposes_no_public_service_ports(self):
         config = yaml.safe_load((ROOT / "deploy/deployment-monitoring-compose.yml").read_text())
         for service in config["services"].values():
