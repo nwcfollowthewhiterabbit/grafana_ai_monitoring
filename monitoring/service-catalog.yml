@@ -871,21 +871,59 @@ companies:
     owners: *provider_owners
     customer_visible: false
     repository: *monitoring_repository
-    runbook: null
-    monitoring: *pending_discovery_monitoring
+    runbook: docs/deployments/mb-skolas-monitoring-2026-09-28.md
+    monitoring: {enabled: true, signals: [node, containers, availability]}
     servers:
       - id: wherp
         alias: wherp
         ipv4: 77.237.244.169
-        display_name: MB Skolas ERP production server
+        display_name: MB Skolas ERP server (Live and Test)
         role: production
-        status: pending_discovery
+        status: active
         owners: *provider_owners
         customer_visible: false
         repository: *monitoring_repository
-        runbook: null
-        monitoring: *pending_discovery_monitoring
-        applications: []
+        runbook: docs/deployments/mb-skolas-monitoring-2026-09-28.md
+        monitoring: {enabled: true, signals: [node, containers, availability]}
+        applications:
+          - id: erpnext3pl
+            stack: erpnext3pl
+            display_name: MB Skolas ERP Live
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: docs/deployments/mb-skolas-monitoring-2026-09-28.md
+            monitoring: &mb_app_monitoring {enabled: true, signals: [containers, availability]}
+            components:
+              - {id: backend, service: backend, display_name: Backend, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: &mb_component_monitoring {enabled: true, signals: [containers]}}
+              - {id: db, service: db, display_name: Database, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: frontend, service: frontend, display_name: Frontend, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: &mb_frontend_monitoring {enabled: true, signals: [containers, availability]}}
+              - {id: queue-long, service: queue-long, display_name: Long queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: queue-short, service: queue-short, display_name: Short queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: redis-cache, service: redis-cache, display_name: Redis cache, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: redis-queue, service: redis-queue, display_name: Redis queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: scheduler, service: scheduler, display_name: Scheduler, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: websocket, service: websocket, display_name: WebSocket, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+          - id: erpnext3plstg
+            stack: erpnext3plstg
+            display_name: MB Skolas ERP Test
+            status: active
+            owners: *provider_owners
+            customer_visible: false
+            repository: null
+            runbook: docs/deployments/mb-skolas-monitoring-2026-09-28.md
+            monitoring: *mb_app_monitoring
+            components:
+              - {id: backend, service: backend, display_name: Backend, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: db, service: db, display_name: Database, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: frontend, service: frontend, display_name: Frontend, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_frontend_monitoring}
+              - {id: queue-long, service: queue-long, display_name: Long queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: queue-short, service: queue-short, display_name: Short queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: redis-cache, service: redis-cache, display_name: Redis cache, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: redis-queue, service: redis-queue, display_name: Redis queue, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: scheduler, service: scheduler, display_name: Scheduler, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
+              - {id: websocket, service: websocket, display_name: WebSocket, expected: true, owners: *provider_owners, customer_visible: false, repository: null, runbook: null, monitoring: *mb_component_monitoring}
 
 service_event_defaults:
   domain:
@@ -952,9 +990,23 @@ nodes:
   - alias: wherp
     company: mb-skolas
     role: production
-    status: pending_discovery
+    status: active
 
 http_services:
+  - company: mb-skolas
+    alias: wherp
+    stack: erpnext3pl
+    service: frontend
+    url: https://erpnext.77.237.244.169.sslip.io
+    criticality: high
+    monitoring: {enabled: true, availability: true, integrity: false}
+  - company: mb-skolas
+    alias: wherp
+    stack: erpnext3plstg
+    service: frontend
+    url: https://erpnext-staging.77.237.244.169.sslip.io
+    criticality: medium
+    monitoring: {enabled: true, availability: true, integrity: false}
   - company: greenleaf
     alias: cloud
     stack: nextcloud-docker

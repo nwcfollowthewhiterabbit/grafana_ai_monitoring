@@ -193,3 +193,29 @@
     application_id: trexfijicom
     component_id: app
     customer_visible: 'true'
+- targets:
+  - https://erpnext.77.237.244.169.sslip.io
+  labels:
+    company: mb-skolas
+    alias: wherp
+    stack: erpnext3pl
+    service: frontend
+    criticality: high
+    company_id: mb-skolas
+    server_id: wherp
+    application_id: erpnext3pl
+    component_id: frontend
+    customer_visible: 'false'
+- targets:
+  - https://erpnext-staging.77.237.244.169.sslip.io
+  labels:
+    company: mb-skolas
+    alias: wherp
+    stack: erpnext3plstg
+    service: frontend
+    criticality: medium
+    company_id: mb-skolas
+    server_id: wherp
+    application_id: erpnext3plstg
+    component_id: frontend
+    customer_visible: 'false'

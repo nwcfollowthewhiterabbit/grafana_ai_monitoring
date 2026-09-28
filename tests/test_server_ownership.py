@@ -42,9 +42,9 @@ CONFIRMED_OWNERS = {
 	"howbot": "rentall",
 	"payroll": "rentall",
 }
-# con2 and voice have verified node telemetry; only these hosts still lack
-# confirmed runtime access and discovery.
-UNDISCOVERED_SERVERS = {"seedquest", "wherp"}
+# con2 and voice have verified node telemetry; wherp is enabled only at rollout.
+# Seedquest remains pending discovery in the post-activation catalog.
+UNDISCOVERED_SERVERS = {"seedquest"}
 
 # The Greenleaf legacy-site migration was completed on 2026-09-19. Keep this
 # expectation aligned with the confirmed runtime placement.
@@ -74,6 +74,7 @@ EXISTING_APPLICATIONS = {
 		"monitoring", "monitoring-promtail", "openclaw-stack", "my-erp",
 		"rabbitsystems-mail", "monobank-balance-bot", "rabbitsystems-site", "quirky",
 	},
+	("mb-skolas", "wherp"): {"erpnext3pl", "erpnext3plstg"},
 }
 
 
@@ -132,22 +133,25 @@ class ServerOwnershipTests(unittest.TestCase):
 		self.assertEqual(legacy[("greenleaf", "new")]["status"], "pending_access")
 		self.assertEqual(legacy[("my own", "test")]["network"], "nat_reverse_tunnel")
 
-	def test_metadata_update_creates_no_scrape_targets_and_preserves_generated_http_targets(self):
+	def test_monitoring_targets_and_generated_http_targets_are_exact(self):
 		expected = (ROOT / "monitoring/prometheus/file_sd/http_targets.yml").read_text(encoding="utf-8")
 		self.assertEqual(RENDERER.render_http_targets(self.catalog), expected)
-		self.assertEqual(len(self.catalog["http_services"]), 15)
+		self.assertEqual(len(self.catalog["http_services"]), 17)
 		greenleaf_aliases = [
 			service["alias"] for service in self.catalog["http_services"]
 			if service["company"] == "greenleaf"
 		]
 		self.assertEqual(greenleaf_aliases.count("cloud"), 7)
 		self.assertEqual(greenleaf_aliases.count("testing"), 8)
+		self.assertEqual({(service["company"], service["alias"], service["stack"]) for service in self.catalog["http_services"] if service["company"] == "mb-skolas"},
+		                 {("mb-skolas", "wherp", "erpnext3pl"), ("mb-skolas", "wherp", "erpnext3plstg")})
 		prometheus = yaml.safe_load((ROOT / "monitoring/prometheus/prometheus.yml").read_text())
 		configured_aliases = {
 			config.get("labels", {}).get("alias")
 			for job in prometheus["scrape_configs"] for config in job.get("static_configs", [])
 		}
 		self.assertFalse(UNDISCOVERED_SERVERS & configured_aliases)
+		self.assertIn("wherp", configured_aliases)
 
 	def test_undiscovered_inventory_is_explicit_without_application_metrics(self):
 		metrics = EVENTS.render_metrics(self.catalog, dt.datetime(2030, 1, 1, tzinfo=dt.timezone.utc))

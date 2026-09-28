@@ -16,6 +16,7 @@ RELAY = "172.23.0.1"
 TRANSPORT = {
     "windows-exporter-fpc:9182": 19132,
     "139.99.155.118:18082": 19118,
+    "node-exporter-wherp:9100": 19133,
     "node-exporter-con2:9100": 19130,
     "node-exporter-voice:9100": 19131,
     "node-exporter-con:9100": 19110,
@@ -41,7 +42,17 @@ def render(config):
             relabel = job.setdefault("relabel_configs", [])
             relabel.insert(0, {"source_labels": ["__address__"], "target_label": "instance"})
             for target, port in TRANSPORT.items():
+                # FPC was enrolled into the Windows job after the original
+                # transport rules; keep that active runtime ordering. The MB
+                # node relay must not leak into unrelated scrape jobs.
+                if target == "windows-exporter-fpc:9182":
+                    continue
+                if target == "node-exporter-wherp:9100" and name != "node_exporter_clients":
+                    continue
                 relabel.append({"source_labels": ["__address__"], "regex": re.escape(target), "target_label": "__address__", "replacement": f"{RELAY}:{port}"})
+            if name == "windows_exporter_clients":
+                target = "windows-exporter-fpc:9182"
+                relabel.append({"source_labels": ["__address__"], "regex": re.escape(target), "target_label": "__address__", "replacement": f"{RELAY}:{TRANSPORT[target]}"})
         if name == "mikrotik_snmp":
             for rule in job["relabel_configs"]:
                 if rule.get("target_label") == "__address__":

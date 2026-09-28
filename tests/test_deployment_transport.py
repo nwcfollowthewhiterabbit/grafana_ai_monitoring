@@ -28,6 +28,9 @@ class DeploymentTransportTests(unittest.TestCase):
         nodes = {item["labels"]["alias"]: item["targets"] for item in by_name["node_exporter_clients"]["static_configs"]}
         self.assertEqual(nodes["con"], ["node-exporter-con:9100"])
         self.assertEqual(nodes["deployment"], ["node-exporter-deployment:9100"])
+        self.assertEqual(nodes["wherp"], ["node-exporter-wherp:9100"])
+        self.assertIn({"source_labels": ["__address__"], "regex": "node\\-exporter\\-wherp:9100", "target_label": "__address__", "replacement": "172.23.0.1:19133"},
+                      by_name["node_exporter_clients"]["relabel_configs"])
 
     def test_cloud_cadvisor_uses_private_reverse_tunnel(self):
         result = MODULE.render(yaml.safe_load((ROOT / "monitoring/prometheus/prometheus.yml").read_text()))
