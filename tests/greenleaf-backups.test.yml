@@ -1,0 +1,387 @@
+# Metadata-only synthetic fixtures. No production queries, alerts or deliveries.
+# From tests/: promtool test rules greenleaf-backups.test.yml
+rule_files:
+  - ../monitoring/prometheus/rules/greenleaf-backups.yml
+
+evaluation_interval: 1m
+group_eval_order:
+  - greenleaf_backup_observations
+
+tests:
+  - name: Daily full archives including ERP use 25 hours not the local ERP seven-hour limit
+    interval: 1m
+    input_series:
+      - &up_long
+        series: 'up{company="greenleaf",alias="cloud",job="node_exporter_clients"}'
+        values: 1x1560
+      - &error_long
+        series: 'node_textfile_scrape_error{company="greenleaf",alias="cloud"}'
+        values: 0x1560
+      - &mtime_long
+        series: 'node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file="/var/lib/prometheus/node-exporter/greenleaf-backups.prom"}'
+        values: 0+60x1560
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x1560
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x1560
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x1560
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 4096x1560
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 1x1560
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 1x1560
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 1x1560
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 4096x1560
+    promql_expr_test:
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",alertstate="firing"})
+        eval_time: 8h
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",alertstate="firing"})
+        eval_time: 24h
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",alertstate="firing"})
+        eval_time: 25h
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",alertstate="firing"})
+        eval_time: 26h
+        exp_samples:
+          - labels: '{}'
+            value: 2
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",stack="erp.greenleafpacific.com",alertstate="firing"})
+        eval_time: 26h
+        exp_samples:
+          - labels: '{}'
+            value: 1
+
+  - name: ERP six-hour LOCAL operational archive alone uses the seven-hour deadline
+    interval: 1m
+    input_series:
+      - *up_long
+      - *error_long
+      - *mtime_long
+      - series: 'greenleaf_backup_erp_operational_local_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x480
+      - series: 'greenleaf_backup_erp_operational_local_manifest_present{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x480
+      - series: 'greenleaf_backup_erp_operational_local_archive_bytes{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 4096x480
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x480
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x480
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 1x480
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="erp.greenleafpacific.com"}'
+        values: 4096x480
+    promql_expr_test:
+      - expr: count(ALERTS{alertname="CloudERPBackupStale",alertstate="firing"})
+        eval_time: 6h
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudERPBackupStale",alertstate="firing"})
+        eval_time: 7h
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudERPBackupStale",alertstate="firing"})
+        eval_time: 8h
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",alertstate="firing"})
+        eval_time: 8h
+        exp_samples: []
+
+  - name: Absent collector cannot establish healthy backup evidence despite a successful scrape
+    interval: 1m
+    input_series:
+      - &up
+        series: 'up{company="greenleaf",alias="cloud",job="node_exporter_clients"}'
+        values: 1x40
+      - &error
+        series: 'node_textfile_scrape_error{company="greenleaf",alias="cloud"}'
+        values: 0x40
+    promql_expr_test:
+      - expr: rs_greenleaf_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: rs_greenleaf_sso_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(ALERTS{alertname=~"CloudBackupMetricsMissing|CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 2
+
+  - name: Repeatedly scraped OLD output does not refresh collection evidence
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - series: 'node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file="/var/lib/prometheus/node-exporter/greenleaf-backups.prom"}'
+        values: 0x40
+      - series: 'greenleaf_sso_backup_collector_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x40
+      - &success
+        series: 'greenleaf_sso_backup_collector_success{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x40
+    promql_expr_test:
+      - expr: count(rs_greenleaf_backup_telemetry_fresh)
+        eval_time: 14m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: rs_greenleaf_backup_telemetry_fresh
+        eval_time: 16m
+        exp_samples: []
+      - expr: rs_greenleaf_sso_backup_telemetry_fresh
+        eval_time: 16m
+        exp_samples: []
+      - expr: count(ALERTS{alertname=~"CloudBackupMetricsMissing|CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 30m
+        exp_samples:
+          - labels: '{}'
+            value: 2
+
+  - name: Future collector timestamps cannot establish fresh evidence
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - *success
+      - series: 'node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file="/var/lib/prometheus/node-exporter/greenleaf-backups.prom"}'
+        values: 3600+60x40
+      - series: 'greenleaf_sso_backup_collector_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 3600+60x40
+    promql_expr_test:
+      - expr: rs_greenleaf_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: rs_greenleaf_sso_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(ALERTS{alertname=~"CloudBackupMetricsMissing|CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 2
+
+  - name: Textfile parse error makes fresh-looking outputs untrusted
+    interval: 1m
+    input_series:
+      - *up
+      - *success
+      - &mtime
+        series: 'node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file="/var/lib/prometheus/node-exporter/greenleaf-backups.prom"}'
+        values: 0+60x40
+      - &collector
+        series: 'greenleaf_sso_backup_collector_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0+60x40
+      - series: 'node_textfile_scrape_error{company="greenleaf",alias="cloud"}'
+        values: 1x40
+    promql_expr_test:
+      - expr: rs_greenleaf_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: rs_greenleaf_sso_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(ALERTS{alertname=~"CloudBackupMetricsMissing|CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 2
+
+  - name: Failed SSO collector remains unknown even with a new attempt timestamp
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - *mtime
+      - *collector
+      - series: 'greenleaf_sso_backup_collector_success{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x40
+    promql_expr_test:
+      - expr: count(rs_greenleaf_backup_telemetry_fresh)
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: rs_greenleaf_sso_backup_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+
+  - name: Previous valid off-host SSO receipt does not hide the latest failed run
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - *success
+      - *collector
+      - &sso_remote
+        series: 'greenleaf_sso_backup_remote_verified_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x40
+      - &sso_timer
+        series: 'greenleaf_sso_backup_timer_enabled{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x40
+      - series: 'greenleaf_sso_backup_last_run_success{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x40
+    promql_expr_test:
+      - expr: count(ALERTS{alertname="CloudSSOBackupFailed",alertstate="firing"})
+        eval_time: 8m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: count(ALERTS{alertname="CloudSSOBackupStale",alertstate="firing"})
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 20m
+        exp_samples: []
+
+  - name: Fresh SSO backups and verified DB restore do not imply a full application restore
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - *success
+      - *collector
+      - *sso_remote
+      - *sso_timer
+      - series: 'greenleaf_sso_backup_last_run_success{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x40
+      - series: 'greenleaf_sso_backup_database_restore_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x40
+      - series: 'greenleaf_sso_backup_application_restore_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x40
+    promql_expr_test:
+      - expr: count(ALERTS{alertname=~"CloudSSO.*",alertstate="firing"})
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(greenleaf_sso_backup_database_restore_timestamp_seconds > 0)
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: count(greenleaf_sso_backup_application_restore_timestamp_seconds > 0)
+        eval_time: 20m
+        exp_samples: []
+
+  - name: SSO observation disappearance does not resolve already firing backup problems
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - series: 'greenleaf_sso_backup_collector_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0+60x15 stale
+      - series: 'greenleaf_sso_backup_collector_success{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x15 stale
+      - series: 'greenleaf_sso_backup_remote_verified_timestamp_seconds{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x15 stale
+      - series: 'greenleaf_sso_backup_timer_enabled{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x15 stale
+      - series: 'greenleaf_sso_backup_last_run_success{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 0x15 stale
+    promql_expr_test:
+      - expr: count(ALERTS{alertname=~"CloudSSOBackupStale|CloudSSOBackupFailed|CloudSSOBackupTimerDisabled",alertstate="firing"})
+        eval_time: 12m
+        exp_samples:
+          - labels: '{}'
+            value: 3
+      - expr: count(ALERTS{alertname=~"CloudSSOBackupStale|CloudSSOBackupFailed|CloudSSOBackupTimerDisabled",alertstate="firing"})
+        eval_time: 40m
+        exp_samples:
+          - labels: '{}'
+            value: 3
+      - expr: count(ALERTS{alertname="CloudSSOBackupMetricsMissing",alertstate="firing"})
+        eval_time: 40m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+
+  - name: One missing remote field remains a per-stack failure without dropping other stacks
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - *mtime
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="missing-manifest"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="missing-manifest"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="missing-manifest"}'
+        values: 4096x40
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="missing-bytes"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="missing-bytes"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="missing-bytes"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="missing-timestamp"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="missing-timestamp"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="missing-timestamp"}'
+        values: 4096x40
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="healthy"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="healthy"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="healthy"}'
+        values: 1x40
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="healthy"}'
+        values: 4096x40
+      # SSO is a separate logical backup, not an expected generic daily archive.
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="sso.greenleafpacific.com"}'
+        values: 1x40
+    promql_expr_test:
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",alertstate="firing"})
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 3
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",stack="healthy",alertstate="firing"})
+        eval_time: 20m
+        exp_samples: []
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",stack="sso.greenleafpacific.com",alertstate="firing"})
+        eval_time: 20m
+        exp_samples: []
+
+  - name: Previously observed per-stack backup failure survives collector disappearance
+    interval: 1m
+    input_series:
+      - *up
+      - *error
+      - series: 'node_textfile_mtime_seconds{company="greenleaf",alias="cloud",file="/var/lib/prometheus/node-exporter/greenleaf-backups.prom"}'
+        values: 0+60x15 stale
+      - series: 'greenleaf_backup_stack_configured{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 1x15 stale
+      - series: 'greenleaf_backup_stack_remote_latest_timestamp_seconds{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 0x15 stale
+      - series: 'greenleaf_backup_stack_remote_manifest_present{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 0x15 stale
+      - series: 'greenleaf_backup_stack_remote_archive_bytes{company="greenleaf",alias="cloud",stack="fiji.pacific.cleaning"}'
+        values: 0x15 stale
+    promql_expr_test:
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",stack="fiji.pacific.cleaning",alertstate="firing"})
+        eval_time: 12m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: count(ALERTS{alertname="CloudDailyStackBackupStale",stack="fiji.pacific.cleaning",alertstate="firing"})
+        eval_time: 40m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: count(ALERTS{alertname="CloudBackupMetricsMissing",alertstate="firing"})
+        eval_time: 40m
+        exp_samples:
+          - labels: '{}'
+            value: 1

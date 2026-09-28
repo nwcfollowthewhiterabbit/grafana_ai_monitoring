@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh deployment Docker application inventory
+[Timer]
+OnBootSec=30s
+OnUnitInactiveSec=60s
+AccuracySec=5s
+[Install]
+WantedBy=timers.target

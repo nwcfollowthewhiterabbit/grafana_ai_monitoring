@@ -1,0 +1,21 @@
+name: rabbit-host-metrics
+services:
+  node-exporter:
+    image: prom/node-exporter@sha256:d00a542e409ee618a4edc67da14dd48c5da66726bbd5537ab2af9c1dfc442c8a
+    container_name: rabbit-host-node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    user: "65534:65534"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.25
+    pids_limit: 64
+    command: [--path.rootfs=/host, --web.listen-address=127.0.0.1:19100]
+    volumes:
+      - /:/host:ro,rslave
+    logging:
+      driver: json-file
+      options: {max-size: 5m, max-file: "2"}

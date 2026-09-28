@@ -1,0 +1,8 @@
+# Temporary, reversible sender cutover for the existing /opt/helper deployment.
+# The API keeps accepting authenticated Grafana webhooks with HTTP 2xx, but the
+# OpenClaw integration records the request as paused and sends no Telegram
+# message. Recreate only `api`; do not apply this override to the whole stack.
+services:
+  api:
+    environment:
+      GRAFANA_WEBHOOK_PROCESSING_ENABLED: "false"

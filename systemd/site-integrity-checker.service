@@ -1,0 +1,24 @@
+[Unit]
+Description=Rabbit Systems public-site integrity checker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/rabbit-monitoring-v2
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/rabbit-monitoring-v2/scripts/site-integrity-checker.py --catalog /opt/rabbit-monitoring-v2/monitoring/service-catalog.yml --output /var/lib/node-exporter-textfile/site-integrity.prom --self-output /var/lib/node-exporter-textfile/site-integrity-checker-self.prom --state /var/lib/rabbit-monitoring-v2/checkers/site-integrity-state.json --lock /run/site-integrity-checker/lock --interval-seconds 43200
+RuntimeDirectory=site-integrity-checker
+StateDirectory=rabbit-monitoring-v2/checkers
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/node-exporter-textfile /var/lib/rabbit-monitoring-v2/checkers /run/site-integrity-checker
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

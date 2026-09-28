@@ -1,0 +1,369 @@
+rule_files:
+  - ../monitoring/prometheus/rules/recording-rules.yml
+  - ../monitoring/prometheus/rules/infra-alerts.yml
+
+evaluation_interval: 30s
+group_eval_order:
+  - managed_monitoring_catalog_inventory
+  - managed_monitoring_server_rollups
+  - managed_monitoring_application_rollups
+  - managed_monitoring_component_rollups
+  - managed_monitoring_service_rollups
+  - infrastructure
+
+tests:
+  - name: Catalog without telemetry is UNKNOWN, never DOWN or green
+    interval: 1m
+    input_series:
+      - series: &server 'service_catalog_server_info{catalog_company="acme",catalog_alias="host",server_status="active"}'
+        values: 1x30
+      - series: &app 'service_catalog_application_info{catalog_company="acme",catalog_alias="host",stack="erp",application_status="active"}'
+        values: 1x30
+      - series: &component 'service_catalog_component_info{catalog_company="acme",catalog_alias="host",stack="erp",service="backend",application_status="active",expected="true"}'
+        values: 1x30
+      - series: 'service_catalog_application_info{catalog_company="acme",catalog_alias="host",stack="not-onboarded",application_status="pending_discovery"}'
+        values: 1x30
+    promql_expr_test:
+      - expr: rs_monitoring_server_status
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_server_status{company="acme",alias="host"}'
+            value: -1
+      - expr: rs_monitoring_application_status
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: -1
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="not-onboarded"}'
+            value: -1
+      - expr: rs_monitoring_application_up
+        eval_time: 20m
+        exp_samples: []
+      - expr: rs_monitoring_component_status
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_component_status{company="acme",alias="host",stack="erp",service="backend"}'
+            value: -1
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ExpectedComponentMissing
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ServiceContainerStopped
+        exp_alerts: []
+
+  - name: Fresh running replicas aggregate once per container and retain monitoring apps
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: 'service_catalog_component_info{catalog_company="acme",catalog_alias="host",stack="erp",service="db",application_status="active",expected="true"}'
+        values: 1x30
+      - series: 'service_catalog_application_info{catalog_company="acme",catalog_alias="host",stack="monitoring",application_status="active"}'
+        values: 1x30
+      - series: &up 'up{job="node_exporter_clients",instance="host:9100",company="acme",alias="host"}'
+        values: 1x30
+      - series: &mtime 'node_textfile_mtime_seconds{job="node_exporter_clients",instance="host:9100",company="acme",alias="host",file="/textfile/docker-stacks.prom"}'
+        values: 0+60x30
+      - series: &running 'docker_stack_container_running{company="acme",alias="host",stack="erp",service="backend",container="backend-1",state="running"}'
+        values: 1x30
+      - series: 'docker_stack_container_running{company="acme",alias="host",stack="erp",service="backend",container="old-backend",state="exited"}'
+        values: 0x30
+      - series: 'docker_stack_container_running{company="acme",alias="host",stack="erp",service="db",container="db",state="running"}'
+        values: 1x30
+      - series: 'docker_stack_container_memory_usage_bytes{company="acme",alias="host",stack="erp",service="backend",container="backend-1",state="running",instance="scrape-a"}'
+        values: 100x30
+      - series: 'docker_stack_container_memory_usage_bytes{company="acme",alias="host",stack="erp",service="backend",container="backend-1",state="running",instance="scrape-b"}'
+        values: 100x30
+      - series: 'docker_stack_container_memory_usage_bytes{company="acme",alias="host",stack="erp",service="backend",container="backend-2",state="running"}'
+        values: 150x30
+      - series: 'docker_stack_container_memory_usage_bytes{company="acme",alias="host",stack="erp",service="db",container="db",state="running"}'
+        values: 200x30
+      - series: 'docker_stack_container_memory_usage_bytes{company="acme",alias="host",stack="monitoring",service="prometheus",container="prometheus",state="running"}'
+        values: 99x30
+      - series: 'docker_stack_container_net_rx_bytes{company="acme",alias="host",stack="erp",service="backend",container="backend-1",state="running",instance="scrape-a"}'
+        values: 0+600x30
+      - series: 'docker_stack_container_net_rx_bytes{company="acme",alias="host",stack="erp",service="backend",container="backend-1",state="running",instance="scrape-b"}'
+        values: 0+600x30
+    promql_expr_test:
+      - expr: rs_monitoring_application_status{stack="erp"}
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: 1
+      - expr: rs_monitoring_application_running_components
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_application_running_components{company="acme",alias="host",stack="erp"}'
+            value: 2
+      - expr: rs_monitoring_application_memory_bytes
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_application_memory_bytes{company="acme",alias="host",stack="erp"}'
+            value: 450
+          - labels: 'rs_monitoring_application_memory_bytes{company="acme",alias="host",stack="monitoring"}'
+            value: 99
+      - expr: scalar(round(rs_monitoring_application_network_rx_bytes_per_second, 0.000001))
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 10
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: ServiceContainerStopped
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ExpectedComponentMissing
+        exp_alerts: []
+
+  - name: Fresh inventory with a stopped expected service is a real runtime failure
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: *up
+        values: 1x30
+      - series: *mtime
+        values: 0+60x30
+      - series: *running
+        values: 0x30
+    promql_expr_test:
+      - expr: rs_monitoring_application_status
+        eval_time: 6m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: 0
+      - expr: count(ALERTS{alertname="ServiceContainerStopped",alertstate="firing"})
+        eval_time: 6m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: ServiceContainerStopped
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ExpectedComponentMissing
+        exp_alerts: []
+
+  - name: Missing container is DOWN only when inventory has refreshed
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: *up
+        values: 1x30
+      - series: *mtime
+        values: 0+60x30
+    promql_expr_test:
+      - expr: rs_monitoring_application_status
+        eval_time: 16m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: 0
+      - expr: count(ALERTS{alertname="ExpectedComponentMissing",alertstate="firing"})
+        eval_time: 16m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+    alert_rule_test:
+      - eval_time: 14m
+        alertname: ExpectedComponentMissing
+        exp_alerts: []
+
+  - name: Old textfile cannot freeze green status or resource graphs
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: *up
+        values: 1x30
+      - series: *mtime
+        values: 0x30
+      - series: *running
+        values: 1x30
+      - series: &cpu 'docker_stack_container_cpu_percent{company="acme",alias="host",stack="erp",service="backend",container="backend-1",state="running"}'
+        values: 10x30
+    promql_expr_test:
+      - expr: rs_monitoring_application_status
+        eval_time: 14m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: 1
+      - expr: rs_monitoring_application_status
+        eval_time: 16m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: -1
+      - expr: rs_monitoring_application_cpu_percent
+        eval_time: 16m
+        exp_samples: []
+      - expr: rs_monitoring_component_up
+        eval_time: 16m
+        exp_samples: []
+      - expr: count(ALERTS{alertname="StackMetricsStale",alertstate="firing"})
+        eval_time: 21m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+    alert_rule_test:
+      - eval_time: 25m
+        alertname: ExpectedComponentMissing
+        exp_alerts: []
+      - eval_time: 25m
+        alertname: ServiceContainerStopped
+        exp_alerts: []
+
+  - name: Exporter unavailable yields host unreachable and application UNKNOWN
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: *up
+        values: 0x30
+      - series: *mtime
+        values: 0+60x30
+      - series: *running
+        values: 1x30
+    promql_expr_test:
+      - expr: rs_monitoring_application_status
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: -1
+      - expr: rs_monitoring_server_status
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_server_status{company="acme",alias="host"}'
+            value: 0
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: StackMetricsStale
+        exp_alerts: []
+      - eval_time: 20m
+        alertname: ExpectedComponentMissing
+        exp_alerts: []
+
+  - name: Textfile parse failure or a missing file is UNKNOWN despite successful scrapes
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: *up
+        values: 1x30
+      - series: *mtime
+        values: 0+60x10 stale
+      - series: *running
+        values: 1x30
+      - series: 'node_textfile_scrape_error{job="node_exporter_clients",instance="host:9100"}'
+        values: 1x10 0x20
+    promql_expr_test:
+      - expr: rs_monitoring_application_status
+        eval_time: 6m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: -1
+      - expr: rs_monitoring_application_status
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_application_status{company="acme",alias="host",stack="erp"}'
+            value: -1
+      - expr: count(ALERTS{alertname="StackMetricsStale",alertstate="firing"})
+        eval_time: 20m
+        exp_samples:
+          - labels: '{}'
+            value: 1
+
+  - name: Future timestamp and pending server access cannot establish current evidence
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: *app
+        values: 1x30
+      - series: *component
+        values: 1x30
+      - series: *up
+        values: 1x30
+      - series: *mtime
+        values: 3600+60x30
+      - series: 'service_catalog_server_info{catalog_company="acme",catalog_alias="pending",server_status="pending_access"}'
+        values: 1x30
+      - series: 'up{job="node_exporter_clients",instance="pending:9100",company="acme",alias="pending",monitoring_status="pending_access"}'
+        values: 0x30
+    promql_expr_test:
+      - expr: rs_monitoring_docker_telemetry_fresh
+        eval_time: 20m
+        exp_samples: []
+      - expr: rs_monitoring_server_status{alias="pending"}
+        eval_time: 20m
+        exp_samples:
+          - labels: 'rs_monitoring_server_status{company="acme",alias="pending"}'
+            value: -1
+
+  - name: Scoped incident heartbeat distinguishes empty queue from unavailable gateway
+    interval: 1m
+    input_series:
+      - series: *server
+        values: 1x30
+      - series: 'service_catalog_server_info{catalog_company="other",catalog_alias="other-host",server_status="active"}'
+        values: 1x30
+      - series: 'up{job="incident_gateway",company="internal",alias="con"}'
+        values: 1x10 0x20
+      - series: 'rs_monitoring_open_incident{company="other",alias="other-host",state="open"}'
+        values: 4x30
+    promql_expr_test:
+      - expr: rs_monitoring_incident_pipeline_available{company="acme"}
+        eval_time: 6m
+        exp_samples:
+          - labels: 'rs_monitoring_incident_pipeline_available{company="acme"}'
+            value: 1
+      - expr: '(sum(rs_monitoring_open_incident{company="acme",state="open"}) or (0 * (max(rs_monitoring_incident_pipeline_available{company="acme"}) == 1))) and on () (max(rs_monitoring_incident_pipeline_available{company="acme"}) == 1)'
+        eval_time: 6m
+        exp_samples:
+          - labels: '{}'
+            value: 0
+      - expr: '(sum(rs_monitoring_open_incident{company="acme",state="open"}) or (0 * (max(rs_monitoring_incident_pipeline_available{company="acme"}) == 1))) and on () (max(rs_monitoring_incident_pipeline_available{company="acme"}) == 1)'
+        eval_time: 20m
+        exp_samples: []
+
+  - name: Twice-daily integrity evidence expires independently of repeated textfile scrapes
+    interval: 1h
+    input_series:
+      - series: 'site_integrity_confirmed_problem{site_company="acme",site_alias="host",site_instance="https://example.com",stack="erp",service="frontend"}'
+        values: 0x30
+      - series: 'site_integrity_last_check_timestamp_seconds{site_company="acme",site_alias="host",site_instance="https://example.com",stack="erp",service="frontend"}'
+        values: 0x30
+    promql_expr_test:
+      - expr: scalar(rs_monitoring_integrity_up)
+        eval_time: 24h
+        exp_samples:
+          - labels: '{}'
+            value: 1
+      - expr: rs_monitoring_integrity_up
+        eval_time: 26h
+        exp_samples: []

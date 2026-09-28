@@ -1,0 +1,9 @@
+[Unit]
+Description=Deployment Docker application resource inventory
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /opt/rabbit-monitoring-v2/scripts/docker-stack-metrics.sh
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true

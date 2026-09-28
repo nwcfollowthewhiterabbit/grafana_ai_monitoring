@@ -4,11 +4,12 @@ services:
     container_name: monitoring-grafana
     restart: unless-stopped
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_SECURITY_SECRET_KEY: ${GRAFANA_SECRET_KEY}
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set GRAFANA_ADMIN_USER in monitoring/.env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in monitoring/.env}
+      GF_SECURITY_SECRET_KEY: ${GRAFANA_SECRET_KEY:?set GRAFANA_SECRET_KEY in monitoring/.env}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_SERVER_DOMAIN: grafana.exemstsc.world
       GF_SERVER_ROOT_URL: https://grafana.exemstsc.world/
@@ -39,10 +40,92 @@ services:
       - ./prometheus/file_sd:/etc/prometheus/file_sd:ro
       - /var/lib/monitoring/prometheus:/prometheus
     depends_on:
+      - alertmanager
       - blackbox
+      - incident-gateway
       - node-exporter-con
       - cadvisor-con
       - snmp-exporter
+
+  alertmanager:
+    image: quay.io/prometheus/alertmanager:v0.33.1
+    container_name: monitoring-alertmanager
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    user: "65534:65534"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --data.retention=120h
+    ports:
+      - "127.0.0.1:9093:9093"
+    volumes:
+      - type: bind
+        source: ./alertmanager/alertmanager.yml
+        target: /etc/alertmanager/alertmanager.yml
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${MONITORING_DATA_ROOT:-/var/lib/monitoring}/alertmanager
+        target: /alertmanager
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - incident-gateway
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  incident-gateway:
+    image: rabbitsystems/incident-gateway:0.1.0
+    build:
+      context: ${INCIDENT_GATEWAY_BUILD_CONTEXT:-../services/incident-gateway}
+    container_name: monitoring-incident-gateway
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    environment:
+      GATEWAY_MODE: ${INCIDENT_GATEWAY_MODE:-shadow}
+      GATEWAY_DATABASE_PATH: /var/lib/incident-gateway/incidents.db
+      TELEGRAM_BOT_TOKEN_FILE: ${TELEGRAM_BOT_TOKEN_FILE:-}
+      TELEGRAM_CHAT_ID_FILE: ${TELEGRAM_CHAT_ID_FILE:-}
+      TELEGRAM_MESSAGE_THREAD_ID: ${TELEGRAM_MESSAGE_THREAD_ID:-}
+      TELEGRAM_MESSAGE_THREAD_ID_FILE: ${TELEGRAM_MESSAGE_THREAD_ID_FILE:-}
+    ports:
+      - "127.0.0.1:8180:8080"
+    volumes:
+      - type: bind
+        source: ${MONITORING_DATA_ROOT:-/var/lib/monitoring}/incident-gateway
+        target: /var/lib/incident-gateway
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ./secrets
+        target: /run/secrets
+        read_only: true
+        bind:
+          create_host_path: false
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   prom-label-proxy-greenleaf:
     image: quay.io/prometheuscommunity/prom-label-proxy:v0.13.0

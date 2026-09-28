@@ -1,4 +1,10 @@
 - targets:
+    - windows-exporter-fpc:9182
+  labels:
+    alias: fpc
+    company: my own
+    role: development
+- targets:
     - 192.168.112.20:9182
   labels:
     alias: rentall-hyperv

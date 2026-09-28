@@ -49,34 +49,35 @@ If the host is old, for example Windows Server 2016, keep TLS 1.2 enabled for Gi
 
 ## Choose Labels
 
-Every Windows target needs stable labels:
+Every Windows target needs these stable discovery labels:
 
 ```yaml
 alias: <short-node-name>
-company: <company-segment>
-workspace: <openclaw-workspace>
+company: <canonical-company-label>
 role: <server-role>
 ```
 
-Use existing workspace labels for alert routing:
+Managed Monitoring v2 routes and scopes on the canonical hierarchy labels
+`company`, `alias`, `stack` and `service`. The target provides `company` and
+`alias`; Prometheus rules add or preserve the appropriate `stack` and `service`.
 
-- `workspace=greenleaf`
-- `workspace=rentoll`
-- `workspace=personal`
+`workspace` is not a v2 routing label. Existing targets may retain values such
+as `rentoll` for legacy dashboards and rollback compatibility, but new routing
+must not depend on it.
 
 Examples:
 
 ```yaml
 alias: rentall-hyperv
 company: rentall
-workspace: rentoll
+workspace: rentoll # optional legacy compatibility only
 role: hyperv
 ```
 
 ```yaml
 alias: rentall-rdp
 company: rentall
-workspace: rentoll
+workspace: rentoll # optional legacy compatibility only
 role: rdp
 ```
 
@@ -174,7 +175,7 @@ Example:
   labels:
     alias: rentall-rdp
     company: rentall
-    workspace: rentoll
+    workspace: rentoll # optional legacy compatibility only
     role: rdp
 ```
 
@@ -209,6 +210,24 @@ https://grafana.exemstsc.world/d/windows-server-2019/windows-server-2019
 ```
 
 The dashboard title is `Windows Server / Hyper-V`. The UID remains `windows-server-2019` for compatibility with existing links.
+
+## Alerts
+
+Production alert evaluation is in Prometheus, using
+`monitoring/prometheus/rules/platform-alerts.yml`. Alertmanager sends firing and
+resolved events to the incident gateway; the legacy Grafana/OpenClaw sender is
+configured only for rollback and is paused while the gateway is authoritative.
+
+The Windows rules are:
+
+- `WindowsExporterDown`;
+- `WindowsWatchedServiceDown`;
+- `WindowsHyperVVMNotRunning`;
+- `WindowsBackupPathUnavailable`;
+- `WindowsBackupStale`.
+
+Each resulting v2 incident must carry `company`, `alias`, `stack` and `service`.
+Do not use `workspace` as the notification route.
 
 ## Troubleshooting
 
