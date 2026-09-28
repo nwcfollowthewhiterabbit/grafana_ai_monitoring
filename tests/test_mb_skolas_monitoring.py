@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 from pathlib import Path
+import subprocess
+import tempfile
 import unittest
 
 import yaml
@@ -82,10 +85,73 @@ class MBSkolasMonitoringTests(unittest.TestCase):
     def test_docker_inventory_timer_uses_reviewed_script(self):
         service = (ROOT / "deploy/mb-skolas-docker-stack-metrics.service").read_text()
         timer = (ROOT / "deploy/mb-skolas-docker-stack-metrics.timer").read_text()
-        self.assertIn("/opt/rabbit-host-metrics/docker-stack-metrics.sh", service)
+        self.assertIn("/opt/rabbit-host-metrics/mb-docker-stack-metrics.sh", service)
         self.assertIn("UMask=0022", service)
         self.assertIn("OnUnitInactiveSec=180s", timer)
-        self.assertTrue((ROOT / "scripts/docker-stack-metrics.sh").is_file())
+        self.assertTrue((ROOT / "scripts/mb-docker-stack-metrics.sh").is_file())
+
+    def test_mb_collector_batched_current_tasks_only_and_fails_closed(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            docker = root / "docker"
+            docker.write_text("""#!/bin/sh
+printf '%s\\n' "$*" >> "$FAKE_DOCKER_LOG"
+case "$1" in
+  ps)
+    case "$*" in
+      *namespace=erpnext3plstg*) printf 'bbbbbbbbbbbb\\n' ;;
+      *namespace=erpnext3pl*) printf 'aaaaaaaaaaaa\\n' ;;
+      *) exit 2 ;;
+    esac
+    ;;
+  stats)
+    printf 'aaaaaaaaaaaa|2.5%%|10MiB / 1GiB|1.0%%|1kB / 2kB|0B / 0B\\n'
+    if [ "${FAKE_DROP_STATS:-0}" != 1 ]; then
+      printf 'bbbbbbbbbbbb|1.0%%|20MiB / 1GiB|2.0%%|3kB / 4kB|0B / 0B\\n'
+    fi
+    ;;
+  inspect)
+    for id do :; done
+    case "$id" in
+      aaaaaaaaaaaa) printf '/live-frontend|registry/erp:live|running|erpnext3pl|erpnext3pl_frontend|123|456\\n' ;;
+      bbbbbbbbbbbb) printf '/test-frontend|registry/erp:test|running|erpnext3plstg|erpnext3plstg_frontend|789|987\\n' ;;
+      *) exit 2 ;;
+    esac
+    ;;
+  *) exit 2 ;;
+esac
+""")
+            docker.chmod(0o755)
+            output = root / "metrics"
+            output.mkdir()
+            calls = root / "calls.log"
+            environment = os.environ | {
+                "PATH": f"{root}:{os.environ['PATH']}",
+                "MB_METRICS_OUTPUT_DIR": str(output),
+                "FAKE_DOCKER_LOG": str(calls),
+            }
+            script = ROOT / "scripts/mb-docker-stack-metrics.sh"
+            first = subprocess.run(["bash", str(script)], env=environment, capture_output=True, text=True)
+            self.assertEqual(first.returncode, 0, first.stderr)
+            metrics = (output / "docker-stacks.prom").read_text()
+            self.assertEqual(metrics.count("docker_stack_container_running{"), 2)
+            self.assertIn('stack="erpnext3pl",service="frontend",container="live-frontend"', metrics)
+            self.assertIn('stack="erpnext3plstg",service="frontend",container="test-frontend"', metrics)
+            self.assertIn('docker_stack_container_memory_usage_bytes{stack="erpnext3pl",', metrics)
+            self.assertIn(" 10485760\n", metrics)
+            recorded = calls.read_text().splitlines()
+            self.assertEqual(sum(line.startswith("ps ") for line in recorded), 2)
+            self.assertEqual(sum(line.startswith("stats ") for line in recorded), 1)
+            self.assertEqual(sum(line.startswith("inspect ") for line in recorded), 2)
+
+            failed = subprocess.run(
+                ["bash", str(script)],
+                env=environment | {"FAKE_DROP_STATS": "1"},
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(failed.returncode, 0)
+            self.assertEqual((output / "docker-stacks.prom").read_text(), metrics)
 
 
 if __name__ == "__main__":
