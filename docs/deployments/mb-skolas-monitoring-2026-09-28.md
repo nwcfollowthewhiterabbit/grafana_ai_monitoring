@@ -102,14 +102,20 @@ unchanged until its separate canonical-source reconciliation is complete.
    is free. Install the pinned `deploy/mb-skolas-host-metrics.compose.yml` in
    an isolated `/opt/rabbit-host-metrics` directory. Create the root-owned
    `/var/lib/node-exporter-textfile` with mode 0755 before Compose starts.
-   Install the reviewed `scripts/docker-stack-metrics.sh` at the path referenced
-   by the new systemd service, owned by root and not writable by others.
+   Install the reviewed `scripts/mb-docker-stack-metrics.sh` at the path
+   referenced by the new systemd service, owned by root and not writable by
+   others. This collector selects only current tasks from `erpnext3pl` and
+   `erpnext3plstg`, samples Docker stats in one batch, and leaves the generic
+   collector used by other hosts untouched.
 2. Run the Docker collector once and inspect its exit status, output freshness,
    `docker_stack_container_running` series for all nine expected services in
    each of `erpnext3pl` and `erpnext3plstg`, and file readability by UID 65534.
    Measure the script's duration/host load before enabling its three-minute
-   timer. The collector reads Docker metadata/stats; it does not restart app
-   stacks or mount the Docker socket into the exporter.
+   timer. The previous generic collector took 111 seconds on this host because
+   it traversed 115 current and historical task containers; do not enable the
+   timer until the MB-only collector is confirmed substantially faster. It
+   reads Docker metadata/stats; it does not restart app stacks or mount the
+   Docker socket into the exporter.
 3. Start the node-exporter and verify the `/metrics` endpoint from loopback
    only. Verify no listening socket on a public interface, and no existing
    Swarm service changes. Do not expose port 9100/19100 publicly.
