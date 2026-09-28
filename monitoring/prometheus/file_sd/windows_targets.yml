@@ -1,20 +1,20 @@
 - targets:
-    - windows-exporter-fpc:9182
-  labels:
-    alias: fpc
-    company: my own
-    role: development
-- targets:
-    - 192.168.112.20:9182
+  - 192.168.112.20:9182
   labels:
     alias: rentall-hyperv
     company: rentall
     workspace: rentoll
     role: hyperv
 - targets:
-    - 192.168.112.19:9182
+  - 192.168.112.19:9182
   labels:
     alias: rentall-rdp
     company: rentall
     workspace: rentoll
     role: rdp
+- targets:
+  - windows-exporter-fpc:9182
+  labels:
+    alias: fpc
+    company: my own
+    role: development

@@ -1,0 +1,12 @@
+[Unit]
+Description=MB Skolas Docker application resource inventory
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /opt/rabbit-host-metrics/docker-stack-metrics.sh
+TimeoutStartSec=240
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0022
